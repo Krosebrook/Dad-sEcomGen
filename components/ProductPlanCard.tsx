@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ProductPlan, ProductVariant } from '../types';
+import { ProductPlan, ProductVariant, RegenerateableSection } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -10,10 +10,12 @@ interface ProductPlanCardProps {
   logoImageUrl: string | null;
   isLoading: boolean;
   isGeneratingLogo: boolean;
+  isRegenerating: Record<RegenerateableSection, boolean>;
   logoError: string | null;
   onGenerateLogo: () => void;
   onUpdatePlan: (variants: ProductVariant[]) => void;
   onPlanChange: (plan: ProductPlan) => void;
+  onRegenerateSection: (section: RegenerateableSection) => void;
   logoStyle: string;
   onLogoStyleChange: (style: string) => void;
   logoColor: string;
@@ -34,16 +36,27 @@ const PencilIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const ReloadIcon: React.FC<{ className?: string, isSpinning?: boolean }> = ({ className, isSpinning }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} ${isSpinning ? 'animate-spin' : ''}`}>
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+    <path d="M21 3v5h-5"/>
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+    <path d="M3 21v-5h5"/>
+  </svg>
+);
+
 
 const ProductPlanCard: React.FC<ProductPlanCardProps> = ({ 
   plan, 
   logoImageUrl, 
   isLoading,
-  isGeneratingLogo, 
+  isGeneratingLogo,
+  isRegenerating, 
   logoError, 
   onGenerateLogo,
   onUpdatePlan,
   onPlanChange,
+  onRegenerateSection,
   logoStyle,
   onLogoStyleChange,
   logoColor,
@@ -102,6 +115,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
     setEditedContent('');
   };
 
+  const overallLoading = isLoading || isGeneratingLogo || Object.values(isRegenerating).some(v => v);
 
   const logoStyles = ['Minimalist', 'Bold', 'Abstract', 'Geometric', 'Vintage', 'Hand-drawn'];
   const logoColors = ['Default', 'Cool-Tones', 'Warm-Tones', 'Monochrome'];
@@ -210,6 +224,14 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Description</h3>
+            <button
+                onClick={() => onRegenerateSection('description')}
+                disabled={overallLoading}
+                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50"
+                aria-label="Regenerate description"
+            >
+                <ReloadIcon isSpinning={isRegenerating.description} />
+            </button>
              {editingField !== 'description' && (
               <button 
                 className="group"
@@ -273,7 +295,20 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
               aria-expanded={isVariantsExpanded}
               aria-controls="variants-section"
             >
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Product Variants</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Product Variants</h3>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRegenerateSection('variants');
+                    }}
+                    disabled={overallLoading}
+                    className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50"
+                    aria-label="Regenerate variants"
+                >
+                    <ReloadIcon isSpinning={isRegenerating.variants} />
+                </button>
+              </div>
               <div className="flex items-center text-sm font-medium text-slate-600 dark:text-slate-400">
                 <span>{isVariantsExpanded ? 'Hide' : 'Show'} ({plan.variants.length})</span>
                 <svg
@@ -358,7 +393,17 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
 
         {/* Tags Section */}
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-200">Marketing Tags</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Marketing Tags</h3>
+            <button
+                onClick={() => onRegenerateSection('tags')}
+                disabled={overallLoading}
+                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50"
+                aria-label="Regenerate marketing tags"
+            >
+                <ReloadIcon isSpinning={isRegenerating.tags} />
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {plan.tags.map((tag, index) => (
               <span key={index} className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full dark:bg-blue-900 dark:text-blue-300">

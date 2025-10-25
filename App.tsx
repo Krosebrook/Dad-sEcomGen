@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, ProductVariant } from './types';
-import { generateProductPlan, generateLogo } from './services/geminiService';
+import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection } from './types';
+import { generateProductPlan, generateLogo, generateScorecard, regeneratePlanSection } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductPlanCard from './components/ProductPlanCard';
+import ProductScorecardCard from './components/ProductScorecardCard';
 import { Input } from './components/ui/Input';
 import { Button } from './components/ui/Button';
 
@@ -16,12 +17,24 @@ const App: React.FC = () => {
   const [savedPlanExists, setSavedPlanExists] = useState<boolean>(false);
   const [inputError, setInputError] = useState<string | null>(null);
 
+  // State for scorecard generation
+  const [scorecard, setScorecard] = useState<ProductScorecard | null>(null);
+  const [isGeneratingScorecard, setIsGeneratingScorecard] = useState<boolean>(false);
+  const [scorecardError, setScorecardError] = useState<string | null>(null);
+
   // State for logo generation
   const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
   const [isGeneratingLogo, setIsGeneratingLogo] = useState<boolean>(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoStyle, setLogoStyle] = useState<string>('Minimalist');
   const [logoColor, setLogoColor] = useState<string>('Default');
+  
+  // State for section regeneration
+  const [isRegenerating, setIsRegenerating] = useState<Record<RegenerateableSection, boolean>>({
+    description: false,
+    variants: false,
+    tags: false,
+  });
 
   const LOCAL_STORAGE_KEY = 'ecommerceProductPlan';
 
@@ -52,6 +65,8 @@ const App: React.FC = () => {
     setProductPlan(null);
     setLogoImageUrl(null);
     setLogoError(null);
+    setScorecard(null);
+    setScorecardError(null);
 
     try {
       const plan = await generateProductPlan(productIdea);
@@ -64,6 +79,24 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [productIdea, isLoading, inputError]);
+
+  const handleGenerateScorecard = useCallback(async () => {
+    if (!productIdea.trim() || isLoading || isGeneratingScorecard) return;
+
+    setIsGeneratingScorecard(true);
+    setScorecardError(null);
+    setScorecard(null);
+
+    try {
+        const result = await generateScorecard(productIdea);
+        setScorecard(result);
+    } catch (err) {
+        console.error(err);
+        setScorecardError('Failed to generate scorecard. Please try again.');
+    } finally {
+        setIsGeneratingScorecard(false);
+    }
+  }, [productIdea, isLoading, isGeneratingScorecard]);
 
   const handleUpdatePlan = useCallback(async (updatedVariants: ProductVariant[]) => {
     if (!productIdea.trim() || isLoading) return;
@@ -83,6 +116,34 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [productIdea, isLoading]);
+
+  const handleRegenerateSection = useCallback(async (section: RegenerateableSection) => {
+    if (!productPlan || isLoading) return;
+
+    setIsRegenerating(prev => ({ ...prev, [section]: true }));
+    setError(null);
+    try {
+      const regeneratedPart = await regeneratePlanSection(productIdea, productPlan, section);
+      setProductPlan(prevPlan => {
+        if (!prevPlan) return null;
+        const newPlan = { ...prevPlan, ...regeneratedPart };
+        // If variants are regenerated, we need to update the total stock and base price
+        if (section === 'variants' && newPlan.variants) {
+          newPlan.stock = newPlan.variants.reduce((acc, v) => acc + v.stock, 0);
+          if (newPlan.variants.length > 0) {
+            newPlan.priceCents = newPlan.variants.reduce((acc, v) => acc + v.priceCents, 0) / newPlan.variants.length;
+          }
+        }
+        return newPlan;
+      });
+      setIsPlanSaved(false);
+    } catch (err) {
+      console.error(`Failed to regenerate ${section}:`, err);
+      setError(`Failed to regenerate ${section}. Please try again.`);
+    } finally {
+      setIsRegenerating(prev => ({ ...prev, [section]: false }));
+    }
+  }, [productPlan, productIdea, isLoading]);
 
   const handlePlanChange = (updatedPlan: ProductPlan) => {
     setProductPlan(updatedPlan);
@@ -108,6 +169,7 @@ const App: React.FC = () => {
       setProductPlan(data.plan);
       setLogoImageUrl(data.logoImageUrl || null);
       setIsPlanSaved(true);
+      setScorecard(null);
       setError(null);
     }
   }, []);
@@ -140,6 +202,8 @@ const App: React.FC = () => {
     setInputError(null);
   };
 
+  const anyLoading = isLoading || isGeneratingScorecard;
+
   return (
     <div className="min-h-screen flex flex-col text-slate-800 dark:text-slate-200">
       <Header />
@@ -160,7 +224,7 @@ const App: React.FC = () => {
                 onChange={handleProductIdeaChange}
                 placeholder="e.g., 'A durable, stylish backpack for tech-savvy dads'"
                 className="text-lg"
-                disabled={isLoading}
+                disabled={anyLoading}
                 isInvalid={!!inputError}
                 aria-invalid={!!inputError}
                 aria-describedby="input-error"
@@ -181,8 +245,8 @@ const App: React.FC = () => {
               ))}
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
-              <Button type="submit" disabled={isLoading || !productIdea.trim() || !!inputError} className="w-full sm:w-auto">
-                {isLoading && !isGeneratingLogo ? (
+              <Button type="submit" disabled={anyLoading || !productIdea.trim() || !!inputError} className="w-full sm:w-auto">
+                {isLoading ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -194,8 +258,21 @@ const App: React.FC = () => {
                   'Generate Product Plan'
                 )}
               </Button>
+              <Button type="button" onClick={handleGenerateScorecard} disabled={anyLoading || !productIdea.trim() || !!inputError} variant="outline" className="w-full sm:w-auto">
+                {isGeneratingScorecard ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Analyzing...
+                  </>
+                ) : (
+                  'Analyze Opportunity'
+                )}
+              </Button>
               {savedPlanExists && (
-                 <Button type="button" variant="outline" onClick={handleLoadPlan} disabled={isLoading} className="w-full sm:w-auto">
+                 <Button type="button" variant="outline" onClick={handleLoadPlan} disabled={anyLoading} className="w-full sm:w-auto">
                     Load Saved Plan
                  </Button>
               )}
@@ -203,7 +280,23 @@ const App: React.FC = () => {
           </form>
         </div>
 
-        <div className="w-full max-w-4xl mt-12">
+        <div className="w-full max-w-4xl mt-12 space-y-8">
+          {scorecardError && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
+              <p>{scorecardError}</p>
+            </div>
+          )}
+          {isGeneratingScorecard && (
+             <div className="flex justify-center items-center flex-col gap-4 p-8 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
+                <svg className="animate-spin h-8 w-8 text-slate-600 dark:text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-slate-600 dark:text-slate-400">Analyzing product opportunity...</p>
+            </div>
+          )}
+          {scorecard && <ProductScorecardCard scorecard={scorecard} />}
+
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
               <p>{error}</p>
@@ -221,10 +314,12 @@ const App: React.FC = () => {
                 logoImageUrl={logoImageUrl}
                 isLoading={isLoading && !isGeneratingLogo}
                 isGeneratingLogo={isGeneratingLogo}
+                isRegenerating={isRegenerating}
                 logoError={logoError}
                 onGenerateLogo={handleGenerateLogo}
                 onUpdatePlan={handleUpdatePlan}
                 onPlanChange={handlePlanChange}
+                onRegenerateSection={handleRegenerateSection}
                 logoStyle={logoStyle}
                 onLogoStyleChange={setLogoStyle}
                 logoColor={logoColor}
