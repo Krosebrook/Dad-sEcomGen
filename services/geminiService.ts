@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { ProductPlan } from '../types';
+import { ProductPlan, ProductVariant } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -15,11 +15,11 @@ const productPlanSchema = {
     properties: {
         productTitle: { type: Type.STRING, description: 'Creative and marketable product title.' },
         slug: { type: Type.STRING, description: 'URL-friendly slug based on the title.' },
-        description: { type: Type.STRING, description: 'Compelling product description (2-3 paragraphs).' },
-        priceCents: { type: Type.INTEGER, description: 'Suggested retail price in cents (e.g., 4999 for $49.99).' },
+        description: { type: Type.STRING, description: 'Compelling product description (2-3 paragraphs) that also includes a section on Unique Selling Propositions (USPs) and a section detailing the Target Audience.' },
+        priceCents: { type: Type.INTEGER, description: 'Suggested retail price in cents (e.g., 4999 for $49.99). This should be an average or base price if variants have different prices.' },
         currency: { type: Type.STRING, description: 'Currency code, e.g., "USD".' },
         sku: { type: Type.STRING, description: 'Base Stock Keeping Unit (SKU) for the main product.' },
-        stock: { type: Type.INTEGER, description: 'Initial stock quantity for the base product.' },
+        stock: { type: Type.INTEGER, description: 'Initial stock quantity for the base product. This should be the sum of all variant stock if variants exist.' },
         tags: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
@@ -44,12 +44,17 @@ const productPlanSchema = {
 };
 
 
-export const generateProductPlan = async (productIdea: string): Promise<ProductPlan> => {
-    const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+export const generateProductPlan = async (productIdea: string, variants?: ProductVariant[]): Promise<ProductPlan> => {
+    const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+    
+    let userContent = productIdea;
+    if (variants && variants.length > 0) {
+      userContent += `\n\nPlease regenerate the plan using these specific product variants, ensuring their price and stock levels match exactly. Adjust the main product's price and stock to reflect these variants:\n${JSON.stringify(variants, null, 2)}`;
+    }
 
     const response = await ai.models.generateContent({
         model: TEXT_MODEL_NAME,
-        contents: productIdea,
+        contents: userContent,
         config: {
             systemInstruction: systemInstruction,
             responseMimeType: "application/json",

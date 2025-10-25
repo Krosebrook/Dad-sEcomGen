@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan } from './types';
+import { ProductPlan, ProductVariant } from './types';
 import { generateProductPlan, generateLogo } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -64,6 +64,30 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [productIdea, isLoading, inputError]);
+
+  const handleUpdatePlan = useCallback(async (updatedVariants: ProductVariant[]) => {
+    if (!productIdea.trim() || isLoading) return;
+
+    setIsLoading(true);
+    setError(null);
+    setLogoError(null);
+
+    try {
+      const plan = await generateProductPlan(productIdea, updatedVariants);
+      setProductPlan(plan);
+      setIsPlanSaved(false);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to update the product plan. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [productIdea, isLoading]);
+
+  const handlePlanChange = (updatedPlan: ProductPlan) => {
+    setProductPlan(updatedPlan);
+    setIsPlanSaved(false);
+  };
   
   const handleSavePlan = useCallback(() => {
     if (productPlan) {
@@ -158,7 +182,7 @@ const App: React.FC = () => {
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
               <Button type="submit" disabled={isLoading || !productIdea.trim() || !!inputError} className="w-full sm:w-auto">
-                {isLoading ? (
+                {isLoading && !isGeneratingLogo ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -195,9 +219,12 @@ const App: React.FC = () => {
               <ProductPlanCard 
                 plan={productPlan}
                 logoImageUrl={logoImageUrl}
+                isLoading={isLoading && !isGeneratingLogo}
                 isGeneratingLogo={isGeneratingLogo}
                 logoError={logoError}
                 onGenerateLogo={handleGenerateLogo}
+                onUpdatePlan={handleUpdatePlan}
+                onPlanChange={handlePlanChange}
                 logoStyle={logoStyle}
                 onLogoStyleChange={setLogoStyle}
                 logoColor={logoColor}

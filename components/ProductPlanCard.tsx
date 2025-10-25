@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
-import { ProductPlan } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ProductPlan, ProductVariant } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Textarea } from './ui/Textarea';
 
 interface ProductPlanCardProps {
   plan: ProductPlan;
   logoImageUrl: string | null;
+  isLoading: boolean;
   isGeneratingLogo: boolean;
   logoError: string | null;
   onGenerateLogo: () => void;
+  onUpdatePlan: (variants: ProductVariant[]) => void;
+  onPlanChange: (plan: ProductPlan) => void;
   logoStyle: string;
   onLogoStyleChange: (style: string) => void;
   logoColor: string;
@@ -22,20 +27,83 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
   }).format(cents / 100);
 };
 
+const PencilIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+    <path d="m15 5 4 4"/>
+  </svg>
+);
+
+
 const ProductPlanCard: React.FC<ProductPlanCardProps> = ({ 
   plan, 
   logoImageUrl, 
+  isLoading,
   isGeneratingLogo, 
   logoError, 
   onGenerateLogo,
+  onUpdatePlan,
+  onPlanChange,
   logoStyle,
   onLogoStyleChange,
   logoColor,
   onLogoColorChange
 }) => {
-  const [isVariantsExpanded, setIsVariantsExpanded] = useState(false);
+  const [isVariantsExpanded, setIsVariantsExpanded] = useState(true);
+  const [editableVariants, setEditableVariants] = useState<ProductVariant[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  const [editingField, setEditingField] = useState<keyof ProductPlan | null>(null);
+  const [editedContent, setEditedContent] = useState<string>('');
 
-  const logoStyles = ['Minimalist', 'Bold', 'Abstract'];
+  useEffect(() => {
+    setEditableVariants(plan.variants.map(v => ({...v})));
+    setHasChanges(false);
+  }, [plan]);
+
+  const handleVariantChange = (index: number, field: 'priceCents' | 'stock', value: string) => {
+    const newVariants = [...editableVariants];
+    const variantToUpdate = { ...newVariants[index] };
+
+    if (field === 'priceCents') {
+      const priceValue = parseFloat(value);
+      variantToUpdate.priceCents = isNaN(priceValue) ? 0 : Math.round(priceValue * 100);
+    } else if (field === 'stock') {
+      const stockValue = parseInt(value, 10);
+      variantToUpdate.stock = isNaN(stockValue) ? 0 : stockValue;
+    }
+    
+    newVariants[index] = variantToUpdate;
+    setEditableVariants(newVariants);
+    setHasChanges(JSON.stringify(newVariants) !== JSON.stringify(plan.variants));
+  };
+
+  const handleUpdateClick = () => {
+    if (hasChanges) {
+      onUpdatePlan(editableVariants);
+    }
+  };
+
+  const handleEditStart = (field: keyof ProductPlan, currentContent: string) => {
+    if (isLoading || isGeneratingLogo) return;
+    setEditingField(field);
+    setEditedContent(currentContent);
+  };
+
+  const handleEditSave = () => {
+    if (!editingField) return;
+    const updatedPlan = { ...plan, [editingField]: editedContent };
+    onPlanChange(updatedPlan);
+    setEditingField(null);
+  };
+
+  const handleEditCancel = () => {
+    setEditingField(null);
+    setEditedContent('');
+  };
+
+
+  const logoStyles = ['Minimalist', 'Bold', 'Abstract', 'Geometric', 'Vintage', 'Hand-drawn'];
   const logoColors = ['Default', 'Cool-Tones', 'Warm-Tones', 'Monochrome'];
 
   return (
@@ -56,7 +124,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
                           key={style}
                           type="button"
                           onClick={() => onLogoStyleChange(style)}
-                          disabled={isGeneratingLogo}
+                          disabled={isGeneratingLogo || isLoading}
                           className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
                             logoStyle === style
                               ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
@@ -76,7 +144,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
                           key={color}
                           type="button"
                           onClick={() => onLogoColorChange(color)}
-                          disabled={isGeneratingLogo}
+                          disabled={isGeneratingLogo || isLoading}
                           className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
                             logoColor === color
                               ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
@@ -89,7 +157,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
                     </div>
                   </div>
                 </div>
-                 <Button onClick={onGenerateLogo} disabled={isGeneratingLogo} size="sm" className="w-full text-xs px-3 py-1.5">
+                 <Button onClick={onGenerateLogo} disabled={isGeneratingLogo || isLoading} size="sm" className="w-full text-xs px-3 py-1.5">
                   {isGeneratingLogo ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -106,8 +174,33 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
               </div>
             )}
           </div>
-          <div className="flex-grow">
-            <CardTitle className="text-2xl md:text-3xl">{plan.productTitle}</CardTitle>
+          <div className="flex-grow w-full">
+            {editingField === 'productTitle' ? (
+              <div className="space-y-2">
+                  <Input
+                    type="text"
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
+                    className="text-2xl md:text-3xl font-semibold h-auto py-1"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleEditSave} size="sm">Save</Button>
+                    <Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button>
+                  </div>
+              </div>
+            ) : (
+              <div 
+                className="group flex items-start gap-2 cursor-pointer" 
+                onClick={() => handleEditStart('productTitle', plan.productTitle)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleEditStart('productTitle', plan.productTitle); }}
+              >
+                <CardTitle className="text-2xl md:text-3xl">{plan.productTitle}</CardTitle>
+                <PencilIcon className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 mt-2 flex-shrink-0" />
+              </div>
+            )}
             <CardDescription>/{plan.slug}</CardDescription>
           </div>
         </div>
@@ -115,8 +208,37 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
       <CardContent className="space-y-6">
         {/* Description Section */}
         <div>
-          <h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-200">Description</h3>
-          <p className="text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{plan.description}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Description</h3>
+             {editingField !== 'description' && (
+              <button 
+                className="group"
+                onClick={() => handleEditStart('description', plan.description)}
+                aria-label="Edit description"
+              >
+                <PencilIcon className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500" />
+              </button>
+             )}
+          </div>
+          {editingField === 'description' ? (
+             <div className="space-y-2">
+                <Textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="min-h-[200px]"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <Button onClick={handleEditSave} size="sm">Save</Button>
+                  <Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button>
+                </div>
+            </div>
+          ) : (
+             <p 
+              className="text-slate-600 dark:text-slate-400 whitespace-pre-wrap cursor-pointer"
+              onClick={() => handleEditStart('description', plan.description)}
+             >{plan.description}</p>
+          )}
         </div>
 
         {/* Core Info Section */}
@@ -170,27 +292,65 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
             </div>
 
             {isVariantsExpanded && (
-              <div id="variants-section" className="overflow-x-auto mt-2">
+              <div id="variants-section" className="overflow-x-auto mt-2 space-y-3">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-slate-100 dark:bg-slate-800">
                     <tr>
                       <th className="p-3 font-semibold">Variant</th>
                       <th className="p-3 font-semibold">SKU</th>
-                      <th className="p-3 font-semibold">Price</th>
+                      <th className="p-3 font-semibold">Price ({plan.currency})</th>
                       <th className="p-3 font-semibold text-right">Stock</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {plan.variants.map((variant, index) => (
-                      <tr key={index} className="border-b border-slate-200 dark:border-slate-700">
-                        <td className="p-3">{variant.title}</td>
-                        <td className="p-3 font-mono">{variant.sku}</td>
-                        <td className="p-3">{formatCurrency(variant.priceCents, plan.currency)}</td>
-                        <td className="p-3 text-right">{variant.stock}</td>
+                    {editableVariants.map((variant, index) => (
+                      <tr key={variant.sku} className="border-b border-slate-200 dark:border-slate-700">
+                        <td className="p-2">{variant.title}</td>
+                        <td className="p-2 font-mono">{variant.sku}</td>
+                        <td className="p-2">
+                          <Input 
+                            type="number"
+                            value={variant.priceCents / 100}
+                            onChange={(e) => handleVariantChange(index, 'priceCents', e.target.value)}
+                            className="h-9 w-24"
+                            disabled={isLoading}
+                            min="0"
+                            step="0.01"
+                          />
+                        </td>
+                        <td className="p-2 text-right">
+                           <Input 
+                            type="number"
+                            value={variant.stock}
+                            onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
+                            className="h-9 w-24"
+                            disabled={isLoading}
+                            min="0"
+                            step="1"
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                 {hasChanges && (
+                  <div className="flex justify-end items-center gap-4 p-2 bg-slate-100 dark:bg-slate-800 rounded-md">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">You have unsaved variant changes.</p>
+                    <Button onClick={handleUpdateClick} disabled={isLoading} size="sm">
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Plan with New Variants'
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
