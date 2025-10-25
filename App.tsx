@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection } from './types';
-import { generateProductPlan, generateLogo, generateScorecard, regeneratePlanSection } from './services/geminiService';
+import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection, MarketingKickstart } from './types';
+import { generateProductPlan, generateLogo, generateScorecard, regeneratePlanSection, generateMarketingKickstart } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductPlanCard from './components/ProductPlanCard';
 import ProductScorecardCard from './components/ProductScorecardCard';
+import MarketingKickstartCard from './components/MarketingKickstartCard';
 import { Input } from './components/ui/Input';
 import { Button } from './components/ui/Button';
 
@@ -35,6 +36,12 @@ const App: React.FC = () => {
     variants: false,
     tags: false,
   });
+
+  // State for Marketing Kickstart
+  const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
+  const [isGeneratingMarketing, setIsGeneratingMarketing] = useState<boolean>(false);
+  const [marketingError, setMarketingError] = useState<string | null>(null);
+
 
   const LOCAL_STORAGE_KEY = 'ecommerceProductPlan';
 
@@ -67,6 +74,9 @@ const App: React.FC = () => {
     setLogoError(null);
     setScorecard(null);
     setScorecardError(null);
+    setMarketingPlan(null);
+    setMarketingError(null);
+
 
     try {
       const plan = await generateProductPlan(productIdea);
@@ -171,6 +181,7 @@ const App: React.FC = () => {
       setIsPlanSaved(true);
       setScorecard(null);
       setError(null);
+      setMarketingPlan(null);
     }
   }, []);
 
@@ -190,6 +201,24 @@ const App: React.FC = () => {
     }
   }, [productPlan, isGeneratingLogo, logoStyle, logoColor]);
 
+  const handleGenerateMarketing = useCallback(async () => {
+    if (!productPlan || isGeneratingMarketing) return;
+
+    setIsGeneratingMarketing(true);
+    setMarketingError(null);
+    setMarketingPlan(null);
+
+    try {
+        const result = await generateMarketingKickstart(productPlan);
+        setMarketingPlan(result);
+    } catch (err) {
+        console.error(err);
+        setMarketingError('Failed to generate marketing assets. Please try again.');
+    } finally {
+        setIsGeneratingMarketing(false);
+    }
+  }, [productPlan, isGeneratingMarketing]);
+
   const examplePrompts = [
     "Handmade leather wallets",
     "Smart gadgets for the garage",
@@ -202,7 +231,7 @@ const App: React.FC = () => {
     setInputError(null);
   };
 
-  const anyLoading = isLoading || isGeneratingScorecard;
+  const anyLoading = isLoading || isGeneratingScorecard || isGeneratingMarketing;
 
   return (
     <div className="min-h-screen flex flex-col text-slate-800 dark:text-slate-200">
@@ -325,6 +354,30 @@ const App: React.FC = () => {
                 logoColor={logoColor}
                 onLogoColorChange={setLogoColor}
                />
+            </div>
+          )}
+           {productPlan && (
+            <div className="w-full max-w-4xl text-center">
+              {!marketingPlan && !isGeneratingMarketing && (
+                <Button onClick={handleGenerateMarketing} disabled={anyLoading}>
+                  Generate Marketing Kickstart
+                </Button>
+              )}
+              {marketingError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center mt-4" role="alert">
+                  <p>{marketingError}</p>
+                </div>
+              )}
+              {isGeneratingMarketing && (
+                <div className="flex justify-center items-center flex-col gap-4 p-8 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
+                  <svg className="animate-spin h-8 w-8 text-slate-600 dark:text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-slate-600 dark:text-slate-400">Generating marketing assets...</p>
+                </div>
+              )}
+              {marketingPlan && <div className="mt-8"><MarketingKickstartCard marketingPlan={marketingPlan} /></div>}
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection } from '../types';
+import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection, MarketingKickstart } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -53,6 +53,49 @@ const scorecardSchema = {
         opportunitySummary: { type: Type.STRING, description: 'A brief, 2-3 sentence summary of the product opportunity, including potential risks or advantages.' }
     },
     required: ['estimatedMonthlySales', 'averageBSR', 'competingFBASellers', 'salesVelocity', 'opportunitySummary']
+};
+
+const marketingKickstartSchema = {
+    type: Type.OBJECT,
+    properties: {
+        socialMediaPosts: {
+            type: Type.ARRAY,
+            description: '3-5 engaging social media posts tailored to different platforms.',
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    platform: { type: Type.STRING, enum: ['Instagram', 'Facebook', 'X'], description: 'The target social media platform.' },
+                    postText: { type: Type.STRING, description: 'The full text content of the post.' },
+                    hashtags: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'A list of relevant hashtags.' },
+                    visualPrompt: { type: Type.STRING, description: 'A brief description of a suggested visual (photo or video).' },
+                },
+                required: ['platform', 'postText', 'hashtags', 'visualPrompt']
+            }
+        },
+        adCopy: {
+            type: Type.ARRAY,
+            description: 'Compelling ad copy for major platforms.',
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    platform: { type: Type.STRING, enum: ['Google Ads', 'Facebook Ads'], description: 'The advertising platform.' },
+                    headlines: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'A list of short, punchy headlines.' },
+                    descriptions: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'A list of longer-form ad descriptions.' },
+                },
+                required: ['platform', 'headlines', 'descriptions']
+            }
+        },
+        launchEmail: {
+            type: Type.OBJECT,
+            description: 'A template for a product launch announcement email.',
+            properties: {
+                subject: { type: Type.STRING, description: 'An engaging email subject line.' },
+                body: { type: Type.STRING, description: 'The full body of the launch email, written in a friendly and persuasive tone.' },
+            },
+            required: ['subject', 'body']
+        }
+    },
+    required: ['socialMediaPosts', 'adCopy', 'launchEmail']
 };
 
 
@@ -165,6 +208,39 @@ export const generateScorecard = async (productIdea: string): Promise<ProductSco
         throw new Error("Received invalid JSON from the API.");
     }
 };
+
+export const generateMarketingKickstart = async (productPlan: ProductPlan): Promise<MarketingKickstart> => {
+    const systemInstruction = `You are a senior digital marketing strategist specializing in e-commerce launches. Based on the provided product plan, generate a "Marketing Kickstart" package. The tone should be engaging and targeted towards the product's audience. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+    
+    const userContent = `Generate a marketing kickstart plan for the following product:\n
+    Product Title: ${productPlan.productTitle}\n
+    Description: ${productPlan.description}\n
+    Tags: ${productPlan.tags.join(', ')}`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: marketingKickstartSchema,
+        },
+    });
+    
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as MarketingKickstart;
+    } catch (e) {
+        console.error("Failed to parse Gemini response for marketing plan:", jsonText, e);
+        throw new Error("Received invalid JSON from the API.");
+    }
+};
+
 
 export const generateLogo = async (productTitle: string, style: string, color: string): Promise<string> => {
     const styleDescription = style.toLowerCase();

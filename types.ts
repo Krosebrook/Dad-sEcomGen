@@ -26,3 +26,27 @@ export interface ProductScorecard {
 }
 
 export type RegenerateableSection = 'description' | 'variants' | 'tags';
+
+export interface SocialMediaPost {
+  platform: 'Instagram' | 'Facebook' | 'X';
+  postText: string;
+  hashtags: string[];
+  visualPrompt: string;
+}
+
+export interface AdCopy {
+  platform: 'Google Ads' | 'Facebook Ads';
+  headlines: string[];
+  descriptions: string[];
+}
+
+export interface LaunchEmail {
+  subject: string;
+  body: string;
+}
+
+export interface MarketingKickstart {
+  socialMediaPosts: SocialMediaPost[];
+  adCopy: AdCopy[];
+  launchEmail: LaunchEmail;
+}
