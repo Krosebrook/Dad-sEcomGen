@@ -10,6 +10,7 @@ import ExportControls from '../ExportControls';
 
 interface Step4LaunchpadProps {
     productPlan: ProductPlan;
+    brandVoice: string;
     marketingPlan: MarketingKickstart | null;
     setMarketingPlan: React.Dispatch<React.SetStateAction<MarketingKickstart | null>>;
     financials: FinancialProjections | null;
@@ -39,6 +40,7 @@ const LoadingSpinner = ({ message }: { message: string }) => (
 
 const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
     productPlan,
+    brandVoice,
     marketingPlan,
     setMarketingPlan,
     financials,
@@ -65,9 +67,9 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                 setError(null);
                 try {
                     const [marketingResult, financialResult, nextStepsResult] = await Promise.all([
-                        generateMarketingKickstart(productPlan),
+                        generateMarketingKickstart(productPlan, brandVoice),
                         generateFinancialAssumptions(productPlan),
-                        generateNextSteps(productPlan)
+                        generateNextSteps(productPlan, brandVoice)
                     ]);
                     setMarketingPlan(marketingResult);
                     setFinancials({
@@ -89,7 +91,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
             // Ensure chat history is initialized for already loaded plans
             setChatHistory([]);
         }
-    }, [marketingPlan, financials, nextSteps, productPlan, chatHistory, setMarketingPlan, setFinancials, setNextSteps, setChatHistory]);
+    }, [marketingPlan, financials, nextSteps, productPlan, chatHistory, setMarketingPlan, setFinancials, setNextSteps, setChatHistory, brandVoice]);
     
     const handleToggleNextStep = useCallback((index: number) => {
         if (nextSteps) {
@@ -155,6 +157,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                     {chatHistory && productPlan && (
                         <ChatCard 
                             productPlan={productPlan}
+                            brandVoice={brandVoice}
                             history={chatHistory}
                             onHistoryChange={handleHistoryChange}
                         />

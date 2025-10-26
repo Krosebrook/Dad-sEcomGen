@@ -84,6 +84,7 @@ export interface SavedVenture {
     lastModified: string;
     data: {
         plan: ProductPlan;
+        brandVoice: string;
         logoImageUrl: string | null;
         analysis: CompetitiveAnalysis | null;
         marketingPlan: MarketingKickstart | null;

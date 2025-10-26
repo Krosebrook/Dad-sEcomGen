@@ -136,8 +136,8 @@ const nextStepsSchema = {
     required: ['checklist']
 };
 
-export const generateProductPlan = async (productIdea: string, variants?: ProductVariant[]): Promise<ProductPlan> => {
-    const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+export const generateProductPlan = async (productIdea: string, brandVoice: string, variants?: ProductVariant[]): Promise<ProductPlan> => {
+    const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
     
     let userContent = productIdea;
     if (variants && variants.length > 0) {
@@ -171,23 +171,25 @@ export const generateProductPlan = async (productIdea: string, variants?: Produc
 export const regeneratePlanSection = async (
     productIdea: string,
     currentPlan: ProductPlan,
-    section: RegenerateableSection
+    section: RegenerateableSection,
+    brandVoice: string
 ): Promise<Partial<ProductPlan>> => {
     let systemInstruction: string;
     let responseSchema: any;
     let userContent = `The current product is "${currentPlan.productTitle}". The original idea was: "${productIdea}".`;
+    const voiceInstruction = `Your writing style should embody the following brand voice: '${brandVoice}'.`;
 
     switch (section) {
         case 'description':
-            systemInstruction = `You are an e-commerce consultant. Regenerate ONLY the 'description' field for the product "${currentPlan.productTitle}". The new description must be compelling and include sections for 'Unique Selling Propositions (USPs)' and 'Target Audience'. Your response MUST be a single valid JSON object with ONLY a 'description' key.`;
+            systemInstruction = `You are an e-commerce consultant. Regenerate ONLY the 'description' field for the product "${currentPlan.productTitle}". The new description must be compelling and include sections for 'Unique Selling Propositions (USPs)' and 'Target Audience'. ${voiceInstruction} Your response MUST be a single valid JSON object with ONLY a 'description' key.`;
             responseSchema = { type: Type.OBJECT, properties: { description: productPlanSchema.properties.description }, required: ['description'] };
             break;
         case 'variants':
-            systemInstruction = `You are an e-commerce consultant. For the product "${currentPlan.productTitle}", generate a new, creative set of product variants (e.g., different colors, sizes, styles). Your response MUST be a single valid JSON object with ONLY a 'variants' key.`;
+            systemInstruction = `You are an e-commerce consultant. For the product "${currentPlan.productTitle}", generate a new, creative set of product variants (e.g., different colors, sizes, styles). ${voiceInstruction} Your response MUST be a single valid JSON object with ONLY a 'variants' key.`;
             responseSchema = { type: Type.OBJECT, properties: { variants: productPlanSchema.properties.variants }, required: ['variants'] };
             break;
         case 'tags':
-            systemInstruction = `You are an e-commerce consultant. For the product "${currentPlan.productTitle}", generate a new set of relevant marketing tags or keywords. Your response MUST be a single valid JSON object with ONLY a 'tags' key.`;
+            systemInstruction = `You are an e-commerce consultant. For the product "${currentPlan.productTitle}", generate a new set of relevant marketing tags or keywords. ${voiceInstruction} Your response MUST be a single valid JSON object with ONLY a 'tags' key.`;
             responseSchema = { type: Type.OBJECT, properties: { tags: productPlanSchema.properties.tags }, required: ['tags'] };
             break;
         default:
@@ -219,9 +221,8 @@ export const regeneratePlanSection = async (
 };
 
 
-export const generateCompetitiveAnalysis = async (productIdea: string): Promise<CompetitiveAnalysis> => {
-    // FIX: Updated prompt and removed responseSchema as googleSearch tool does not guarantee strict JSON output.
-    const systemInstruction = `You are an expert market research analyst specializing in e-commerce. A user has a product idea. Your task is to perform a competitive analysis using real-time Google Search data. Provide a concise, actionable "Competitive Intelligence" report. Your response MUST be a single, valid JSON object that conforms to the provided schema, wrapped in a markdown code block ('''json ... '''). Do not include any text, explanation, or markdown formatting before or after the JSON code block.`;
+export const generateCompetitiveAnalysis = async (productIdea: string, brandVoice: string): Promise<CompetitiveAnalysis> => {
+    const systemInstruction = `You are an expert market research analyst specializing in e-commerce. A user has a product idea. Your task is to perform a competitive analysis using real-time Google Search data. Provide a concise, actionable "Competitive Intelligence" report. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema, wrapped in a markdown code block ('''json ... '''). Do not include any text, explanation, or markdown formatting before or after the JSON code block.`;
 
     const response = await ai.models.generateContent({
         model: TEXT_MODEL_NAME,
@@ -273,8 +274,8 @@ export const generateCompetitiveAnalysis = async (productIdea: string): Promise<
     }
 };
 
-export const generateMarketingKickstart = async (productPlan: ProductPlan): Promise<MarketingKickstart> => {
-    const systemInstruction = `You are a senior digital marketing strategist specializing in e-commerce launches. Based on the provided product plan, generate a "Marketing Kickstart" package. The tone should be engaging and targeted towards the product's audience. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+export const generateMarketingKickstart = async (productPlan: ProductPlan, brandVoice: string): Promise<MarketingKickstart> => {
+    const systemInstruction = `You are a senior digital marketing strategist specializing in e-commerce launches. Based on the provided product plan, generate a "Marketing Kickstart" package. The tone should be engaging and targeted towards the product's audience. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
     
     const userContent = `Generate a marketing kickstart plan for the following product:\n
     Product Title: ${productPlan.productTitle}\n
@@ -337,8 +338,8 @@ export const generateFinancialAssumptions = async (productPlan: ProductPlan): Pr
     }
 };
 
-export const generateNextSteps = async (productPlan: ProductPlan): Promise<string[]> => {
-    const systemInstruction = `You are a startup mentor and e-commerce expert. Based on the provided product plan, generate a checklist of the immediate next steps an entrepreneur should take to bring their product to life. The steps should be concise, actionable, and tangible. Your response MUST be a single, valid JSON object that conforms to the provided schema.`;
+export const generateNextSteps = async (productPlan: ProductPlan, brandVoice: string): Promise<string[]> => {
+    const systemInstruction = `You are a startup mentor and e-commerce expert. Based on the provided product plan, generate a checklist of the immediate next steps an entrepreneur should take to bring their product to life. The steps should be concise, actionable, and tangible. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema.`;
     
     const userContent = `Generate a next steps checklist for the following product:\n
     Product Title: ${productPlan.productTitle}\n
@@ -369,8 +370,8 @@ export const generateNextSteps = async (productPlan: ProductPlan): Promise<strin
 };
 
 
-export const continueChat = async (productPlan: ProductPlan, history: ChatMessage[]): Promise<string> => {
-    const systemInstruction = `You are an expert e-commerce business consultant acting as an AI sounding board. The user has generated the following business plan and wants to discuss it with you. Your task is to provide helpful, concise, and actionable advice based on their questions. Always refer to the context of their specific plan.
+export const continueChat = async (productPlan: ProductPlan, history: ChatMessage[], brandVoice: string): Promise<string> => {
+    const systemInstruction = `You are an expert e-commerce business consultant acting as an AI sounding board. The user has generated the following business plan and wants to discuss it with you. Your task is to provide helpful, concise, and actionable advice based on their questions. Always refer to the context of their specific plan. Your writing style should embody the following brand voice: '${brandVoice}'.
 
     THEIR PLAN:
     Title: ${productPlan.productTitle}

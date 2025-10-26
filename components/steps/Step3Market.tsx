@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 
 interface Step3MarketProps {
     productIdea: string;
+    brandVoice: string;
     analysis: CompetitiveAnalysis | null;
     setAnalysis: React.Dispatch<React.SetStateAction<CompetitiveAnalysis | null>>;
     onNavigateToLaunchpad: () => void;
@@ -25,6 +26,7 @@ const LoadingSpinner = ({ message }: { message: string }) => (
 
 const Step3Market: React.FC<Step3MarketProps> = ({
     productIdea,
+    brandVoice,
     analysis,
     setAnalysis,
     onNavigateToLaunchpad,
@@ -39,7 +41,7 @@ const Step3Market: React.FC<Step3MarketProps> = ({
                 setIsAnalyzing(true);
                 setAnalysisError(null);
                 try {
-                    const result = await generateCompetitiveAnalysis(productIdea);
+                    const result = await generateCompetitiveAnalysis(productIdea, brandVoice);
                     setAnalysis(result);
                 } catch (err) {
                     console.error(err);
@@ -50,7 +52,7 @@ const Step3Market: React.FC<Step3MarketProps> = ({
             };
             fetchAnalysis();
         }
-    }, [analysis, productIdea, setAnalysis]);
+    }, [analysis, productIdea, setAnalysis, brandVoice]);
 
 
     return (

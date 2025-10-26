@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPlanSaved, setIsPlanSaved] = useState<boolean>(false);
   const [inputError, setInputError] = useState<string | null>(null);
+  const [brandVoice, setBrandVoice] = useState<string>('Knowledgeable & Trustworthy Dad');
 
   // Multi-venture state
   const [ventures, setVentures] = useState<SavedVenture[]>([]);
@@ -70,6 +71,7 @@ const App: React.FC = () => {
     setChatHistory(null);
     setCurrentVentureId(null);
     setIsPlanSaved(false);
+    setBrandVoice('Knowledgeable & Trustworthy Dad');
   };
 
   const handleGeneratePlan = useCallback(async (e: React.FormEvent) => {
@@ -81,7 +83,7 @@ const App: React.FC = () => {
     resetAllOutputs();
 
     try {
-      const plan = await generateProductPlan(productIdea);
+      const plan = await generateProductPlan(productIdea, brandVoice);
       setProductPlan(plan);
       setCurrentStep(2);
     } catch (err) {
@@ -90,7 +92,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [productIdea, isLoading, inputError]);
+  }, [productIdea, isLoading, inputError, brandVoice]);
   
   const handlePlanChange = (updatedPlan: ProductPlan) => {
     setProductPlan(updatedPlan);
@@ -117,6 +119,7 @@ const App: React.FC = () => {
 
     const ventureData = { 
         plan: productPlan, 
+        brandVoice,
         logoImageUrl,
         analysis,
         marketingPlan,
@@ -149,7 +152,7 @@ const App: React.FC = () => {
     localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
     setIsPlanSaved(true);
 
-  }, [productPlan, logoImageUrl, analysis, marketingPlan, financials, nextSteps, chatHistory, ventures, currentVentureId]);
+  }, [productPlan, brandVoice, logoImageUrl, analysis, marketingPlan, financials, nextSteps, chatHistory, ventures, currentVentureId]);
 
 
   const handleLoadVenture = useCallback((ventureId: string) => {
@@ -159,6 +162,7 @@ const App: React.FC = () => {
       resetAllOutputs();
       setProductPlan(data.plan);
       setProductIdea(data.plan.productTitle);
+      setBrandVoice(data.brandVoice || 'Knowledgeable & Trustworthy Dad');
       setLogoImageUrl(data.logoImageUrl || null);
       setAnalysis(data.analysis || null);
       setMarketingPlan(data.marketingPlan || null);
@@ -211,6 +215,8 @@ const App: React.FC = () => {
             isLoading={isLoading}
             inputError={inputError}
             handleExampleClick={handleExampleClick}
+            brandVoice={brandVoice}
+            setBrandVoice={setBrandVoice}
           />
         );
       case 2:
@@ -218,6 +224,7 @@ const App: React.FC = () => {
           <Step2Blueprint
             plan={productPlan}
             productIdea={productIdea}
+            brandVoice={brandVoice}
             onPlanChange={handlePlanChange}
             logoImageUrl={logoImageUrl}
             setLogoImageUrl={setLogoImageUrl}
@@ -231,6 +238,7 @@ const App: React.FC = () => {
         return (
           <Step3Market
             productIdea={productIdea}
+            brandVoice={brandVoice}
             analysis={analysis}
             setAnalysis={setAnalysis}
             onNavigateToLaunchpad={() => setCurrentStep(4)}
@@ -241,6 +249,7 @@ const App: React.FC = () => {
           return productPlan && (
             <Step4Launchpad
                 productPlan={productPlan}
+                brandVoice={brandVoice}
                 marketingPlan={marketingPlan}
                 setMarketingPlan={setMarketingPlan}
                 financials={financials}

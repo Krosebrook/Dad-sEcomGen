@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 interface Step2BlueprintProps {
     plan: ProductPlan;
     productIdea: string;
+    brandVoice: string;
     onPlanChange: (updatedPlan: ProductPlan) => void;
     logoImageUrl: string | null;
     setLogoImageUrl: (url: string | null) => void;
@@ -19,6 +20,7 @@ interface Step2BlueprintProps {
 const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
     plan,
     productIdea,
+    brandVoice,
     onPlanChange,
     logoImageUrl,
     setLogoImageUrl,
@@ -58,7 +60,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
         if (!plan) return;
         setIsRegenerating(prev => ({ ...prev, [section]: true }));
         try {
-            const regeneratedPart = await regeneratePlanSection(productIdea, plan, section);
+            const regeneratedPart = await regeneratePlanSection(productIdea, plan, section, brandVoice);
             const newPlan = { ...plan, ...regeneratedPart };
             if (section === 'variants' && newPlan.variants) {
                 newPlan.stock = newPlan.variants.reduce((acc, v) => acc + v.stock, 0);
@@ -73,7 +75,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
         } finally {
             setIsRegenerating(prev => ({ ...prev, [section]: false }));
         }
-    }, [plan, productIdea, onPlanChange]);
+    }, [plan, productIdea, onPlanChange, brandVoice]);
     
     const handleUpdatePlan = useCallback(async (updatedVariants: ProductVariant[]) => {
     if (!productIdea.trim()) return;
@@ -82,7 +84,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
     setLogoError(null);
 
     try {
-      const plan = await generateProductPlan(productIdea, updatedVariants);
+      const plan = await generateProductPlan(productIdea, brandVoice, updatedVariants);
       onPlanChange(plan);
     } catch (err) {
       console.error(err);
@@ -90,7 +92,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
     } finally {
       setIsUpdating(false);
     }
-  }, [productIdea, onPlanChange]);
+  }, [productIdea, onPlanChange, brandVoice]);
 
 
     return (

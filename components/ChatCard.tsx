@@ -7,6 +7,7 @@ import { Button } from './ui/Button';
 
 interface ChatCardProps {
   productPlan: ProductPlan;
+  brandVoice: string;
   history: ChatMessage[];
   onHistoryChange: (newHistory: ChatMessage[]) => void;
 }
@@ -15,7 +16,7 @@ const SendIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
 );
 
-const ChatCard: React.FC<ChatCardProps> = ({ productPlan, history, onHistoryChange }) => {
+const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, onHistoryChange }) => {
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -38,7 +39,7 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, history, onHistoryChan
         setIsLoading(true);
 
         try {
-            const aiResponse = await continueChat(productPlan, updatedHistory);
+            const aiResponse = await continueChat(productPlan, updatedHistory, brandVoice);
             const newAiMessage: ChatMessage = { role: 'model', content: aiResponse };
             onHistoryChange([...updatedHistory, newAiMessage]);
         } catch (error) {

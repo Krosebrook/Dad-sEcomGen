@@ -9,6 +9,8 @@ interface Step1IdeaProps {
     isLoading: boolean;
     inputError: string | null;
     handleExampleClick: (prompt: string) => void;
+    brandVoice: string;
+    setBrandVoice: (voice: string) => void;
 }
 
 const Step1Idea: React.FC<Step1IdeaProps> = ({
@@ -18,14 +20,18 @@ const Step1Idea: React.FC<Step1IdeaProps> = ({
     isLoading,
     inputError,
     handleExampleClick,
+    brandVoice,
+    setBrandVoice,
 }) => {
     const examplePrompts = ["Handmade leather wallets", "Smart gadgets for the garage", "Gourmet BBQ sauces", "Customizable wooden toys"];
+    const brandVoices = ["Witty & Humorous Dad", "Knowledgeable & Trustworthy Dad", "Enthusiastic & Fun Dad", "Modern & Minimalist"];
+
 
     return (
         <div className="w-full max-w-3xl text-center animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">Turn Your Idea into a Plan</h2>
             <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">Describe a product you'd like to sell, and our AI will generate a detailed business plan.</p>
-            <form onSubmit={handleGeneratePlan} className="space-y-2">
+            <form onSubmit={handleGeneratePlan} className="space-y-4">
                 <div>
                     <Input
                         type="text"
@@ -40,8 +46,30 @@ const Step1Idea: React.FC<Step1IdeaProps> = ({
                     />
                     {inputError && <p id="input-error" className="text-red-500 text-sm text-left mt-1">{inputError}</p>}
                 </div>
-                <div className="flex flex-wrap justify-center gap-2 pt-2 pb-2">
-                    <span className="text-sm text-slate-500 dark:text-slate-400 self-center">Try an example:</span>
+
+                <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">Brand Voice</label>
+                    <div className="flex flex-wrap justify-center gap-2">
+                         {brandVoices.map((voice) => (
+                            <button
+                                key={voice}
+                                type="button"
+                                onClick={() => setBrandVoice(voice)}
+                                disabled={isLoading}
+                                className={`px-3 py-1.5 text-sm rounded-full transition-colors font-semibold ${
+                                    brandVoice === voice
+                                    ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900 ring-2 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900 ring-slate-900 dark:ring-slate-50'
+                                    : 'bg-white hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200'
+                                }`}
+                                >
+                                {voice}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap justify-center items-center gap-2 pt-2 pb-2">
+                    <span className="text-sm text-slate-500 dark:text-slate-400 self-center">Or try an example:</span>
                     {examplePrompts.map((prompt) => (
                         <button
                             key={prompt}
