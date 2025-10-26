@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage } from '../../types';
+import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage, CompetitiveAnalysis } from '../../types';
 import { generateMarketingKickstart, generateFinancialAssumptions, generateNextSteps } from '../../services/geminiService';
 import MarketingKickstartCard from '../MarketingKickstartCard';
 import FinancialProjectionsCard from '../FinancialProjectionsCard';
 import NextStepsCard from '../NextStepsCard';
 import ChatCard from '../ChatCard';
 import { Button } from '../ui/Button';
+import ExportControls from '../ExportControls';
 
 interface Step4LaunchpadProps {
     productPlan: ProductPlan;
@@ -22,6 +23,8 @@ interface Step4LaunchpadProps {
     isPlanSaved: boolean;
     onSavePlan: () => void;
     onPlanModified: () => void;
+    logoImageUrl: string | null;
+    analysis: CompetitiveAnalysis | null;
 }
 
 const LoadingSpinner = ({ message }: { message: string }) => (
@@ -49,6 +52,8 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
     isPlanSaved,
     onSavePlan,
     onPlanModified,
+    logoImageUrl,
+    analysis,
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -139,6 +144,14 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
             {isLoading && <LoadingSpinner message="Building your launchpad..." />}
             {!isLoading && (
                 <>
+                    <ExportControls 
+                        productPlan={productPlan}
+                        logoImageUrl={logoImageUrl}
+                        analysis={analysis}
+                        marketingPlan={marketingPlan}
+                        financials={financials}
+                        nextSteps={nextSteps}
+                    />
                     {chatHistory && productPlan && (
                         <ChatCard 
                             productPlan={productPlan}
@@ -156,7 +169,6 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                         />
                     )}
                     {marketingPlan && <MarketingKickstartCard marketingPlan={marketingPlan} />}
-                    {/* FIX: Corrected typo from productplan to productPlan */}
                     {financials && productPlan && <FinancialProjectionsCard financials={financials} onFinancialsChange={setFinancials} currency={productPlan.currency} />}
                 </>
             )}

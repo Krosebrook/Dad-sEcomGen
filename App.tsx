@@ -1,4 +1,3 @@
-// FIX: Replaced single-plan component with the multi-venture component from types.ts and fixed imports.
 import React, { useState, useCallback, useEffect } from 'react';
 import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage } from './types';
 import { generateProductPlan } from './services/geminiService';
@@ -169,7 +168,7 @@ const App: React.FC = () => {
       setCurrentVentureId(ventureToLoad.id);
       setIsPlanSaved(true);
       setError(null);
-      setCurrentStep(2);
+      setCurrentStep(2); // Start at the blueprint step
       setIsDashboardVisible(false);
     }
   }, [ventures]);
@@ -255,6 +254,8 @@ const App: React.FC = () => {
                 isPlanSaved={isPlanSaved}
                 onSavePlan={handleSaveVenture}
                 onPlanModified={handlePlanModified}
+                logoImageUrl={logoImageUrl}
+                analysis={analysis}
             />
           );
       default:
