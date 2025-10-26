@@ -1,6 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage, SMARTGoals, PriceHistoryPoint, SWOTAnalysis, CustomerPersona, BrandIdentityKit, ShopifyIntegration, ContentStrategy, SupplierQuote } from './types';
-import { generateProductPlan } from './services/geminiService';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProgressBar from './components/ProgressBar';
@@ -10,382 +8,350 @@ import Step3Market from './components/steps/Step3Market';
 import Step4Launchpad from './components/steps/Step4Launchpad';
 import MyVenturesDashboard from './components/MyVenturesDashboard';
 import ProductScout from './components/ProductScout';
+import { generateProductPlan, generateSmartGoals } from './services/geminiService';
 
-const generateMockPriceHistory = (basePriceCents: number): PriceHistoryPoint[] => {
-    const history: PriceHistoryPoint[] = [];
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        const fluctuation = (Math.random() - 0.5) * 0.3; // Fluctuate by +/- 15%
-        const price = Math.round(basePriceCents * (1 + fluctuation));
-        history.push({
-            date: date.toISOString(),
-            priceCents: price,
-        });
-    }
-    return history;
-};
-
+import {
+    ProductPlan,
+    MarketingKickstart,
+    FinancialProjections,
+    NextStepItem,
+    CompetitiveAnalysis,
+    SWOTAnalysis,
+    CustomerPersona,
+    BrandIdentityKit,
+    SMARTGoals,
+    ChatMessage,
+    SavedVenture,
+    AppData,
+    ContentStrategy,
+    ShopifyIntegration,
+    SupplierQuote,
+    PriceHistoryPoint,
+} from './types';
 
 const App: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [productIdea, setProductIdea] = useState<string>('');
-  const [productPlan, setProductPlan] = useState<ProductPlan | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPlanSaved, setIsPlanSaved] = useState<boolean>(false);
-  const [inputError, setInputError] = useState<string | null>(null);
-  const [brandVoice, setBrandVoice] = useState<string>('Knowledgeable & Trustworthy Dad');
+    const [currentStep, setCurrentStep] = useState(1);
+    const [productIdea, setProductIdea] = useState('');
+    const [brandVoice, setBrandVoice] = useState('Witty & Humorous Dad');
+    const [isLoading, setIsLoading] = useState(false);
+    const [inputError, setInputError] = useState<string | null>(null);
 
-  // Multi-venture state
-  const [ventures, setVentures] = useState<SavedVenture[]>([]);
-  const [currentVentureId, setCurrentVentureId] = useState<string | null>(null);
-  const [isDashboardVisible, setIsDashboardVisible] = useState<boolean>(false);
-  const [isScoutVisible, setIsScoutVisible] = useState<boolean>(false);
-
-  const [smartGoals, setSmartGoals] = useState<SMARTGoals | null>(null);
-  const [analysis, setAnalysis] = useState<CompetitiveAnalysis | null>(null);
-  const [swotAnalysis, setSwotAnalysis] = useState<SWOTAnalysis | null>(null);
-  const [customerPersona, setCustomerPersona] = useState<CustomerPersona | null>(null);
-  const [personaAvatarUrl, setPersonaAvatarUrl] = useState<string | null>(null);
-  const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
-  const [brandKit, setBrandKit] = useState<BrandIdentityKit | null>(null);
-  const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
-  const [financials, setFinancials] = useState<FinancialProjections | null>(null);
-  const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuote[]>([]);
-  const [nextSteps, setNextSteps] = useState<NextStepItem[] | null>(null);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[] | null>(null);
-  const [storefrontMockupUrl, setStorefrontMockupUrl] = useState<string | null>(null);
-  const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
-  const [contentStrategy, setContentStrategy] = useState<ContentStrategy | null>(null);
+    // State for all data generated throughout the steps
+    const [ventureId, setVentureId] = useState<string | null>(null);
+    const [ventureName, setVentureName] = useState('');
+    const [smartGoals, setSmartGoals] = useState<SMARTGoals | null>(null);
+    const [plan, setPlan] = useState<ProductPlan | null>(null);
+    const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
+    const [brandKit, setBrandKit] = useState<BrandIdentityKit | null>(null);
+    const [analysis, setAnalysis] = useState<CompetitiveAnalysis | null>(null);
+    const [swotAnalysis, setSwotAnalysis] = useState<SWOTAnalysis | null>(null);
+    const [customerPersona, setCustomerPersona] = useState<CustomerPersona | null>(null);
+    const [personaAvatarUrl, setPersonaAvatarUrl] = useState<string | null>(null);
+    const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
+    const [financials, setFinancials] = useState<FinancialProjections | null>(null);
+    const [nextSteps, setNextSteps] = useState<NextStepItem[]>([]);
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [storefrontMockupUrl, setStorefrontMockupUrl] = useState<string | null>(null);
+    const [contentStrategy, setContentStrategy] = useState<ContentStrategy | null>(null);
+    const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
+    const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuote[]>([]);
+    const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
 
 
-  const VENTURES_STORAGE_KEY = 'myVentures';
+    const [isPlanSaved, setIsPlanSaved] = useState(false);
+    const [savedVentures, setSavedVentures] = useState<SavedVenture[]>([]);
+    const [showVentures, setShowVentures] = useState(false);
+    const [showScout, setShowScout] = useState(false);
 
-  useEffect(() => {
-    try {
-      const savedVenturesJSON = localStorage.getItem(VENTURES_STORAGE_KEY);
-      if (savedVenturesJSON) {
-        const savedVentures = JSON.parse(savedVenturesJSON);
-        setVentures(savedVentures);
-      }
-    } catch (e) {
-      console.error("Failed to load ventures from storage:", e);
-      setVentures([]);
-    }
-  }, []);
+    useEffect(() => {
+        const ventures = localStorage.getItem('dad-ecommerce-ventures');
+        if (ventures) {
+            setSavedVentures(JSON.parse(ventures));
+        }
+    }, []);
 
-  const handleProductIdeaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setProductIdea(value);
+    const resetState = () => {
+        setCurrentStep(1);
+        setProductIdea('');
+        setBrandVoice('Witty & Humorous Dad');
+        setInputError(null);
+        setVentureId(null);
+        setVentureName('');
+        setSmartGoals(null);
+        setPlan(null);
+        setLogoImageUrl(null);
+        setBrandKit(null);
+        setAnalysis(null);
+        setSwotAnalysis(null);
+        setCustomerPersona(null);
+        setPersonaAvatarUrl(null);
+        setMarketingPlan(null);
+        setFinancials(null);
+        setNextSteps([]);
+        setIsPlanSaved(false);
+        setChatHistory([]);
+        setStorefrontMockupUrl(null);
+        setContentStrategy(null);
+        setShopifyIntegration(null);
+        setSupplierQuotes([]);
+        setPriceHistory([]);
+    };
+    
+    const onPlanModified = useCallback(() => {
+        setIsPlanSaved(false);
+    }, []);
 
-    const validationRegex = /^[a-zA-Z0-9\s]*$/;
-    if (validationRegex.test(value)) {
-      setInputError(null);
-    } else {
-      setInputError('Only letters, numbers, and spaces are allowed.');
-    }
-  };
-  
-  const resetAllOutputs = () => {
-    setProductPlan(null);
-    setSmartGoals(null);
-    setLogoImageUrl(null);
-    setBrandKit(null);
-    setAnalysis(null);
-    setSwotAnalysis(null);
-    setCustomerPersona(null);
-    setPersonaAvatarUrl(null);
-    setMarketingPlan(null);
-    setFinancials(null);
-    setSupplierQuotes([]);
-    setNextSteps(null);
-    setChatHistory(null);
-    setStorefrontMockupUrl(null);
-    setShopifyIntegration(null);
-    setContentStrategy(null);
-    setCurrentVentureId(null);
-    setIsPlanSaved(false);
-    setBrandVoice('Knowledgeable & Trustworthy Dad');
-  };
+    const handleProductIdeaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setProductIdea(e.target.value);
+        if (e.target.value.trim().length > 0) {
+            setInputError(null);
+        }
+    };
+    
+    const handleGeneratePlan = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!productIdea.trim()) {
+            setInputError('Please enter a product idea.');
+            return;
+        }
 
-  const handleGeneratePlan = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!productIdea.trim() || isLoading || inputError) return;
+        setIsLoading(true);
+        setInputError(null);
 
-    setIsLoading(true);
-    setError(null);
-    resetAllOutputs();
-
-    try {
-      const { plan, goals } = await generateProductPlan(productIdea, brandVoice);
-      setProductPlan(plan);
-      setSmartGoals(goals);
-      // We no longer advance the step here; the user will do it from Step1
-    } catch (err) {
-      console.error(err);
-      setError('Failed to generate a product plan. Please check your API key and try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [productIdea, isLoading, inputError, brandVoice]);
-  
-  const handlePlanChange = (updatedPlan: ProductPlan) => {
-    setProductPlan(updatedPlan);
-    setIsPlanSaved(false);
-  };
-
-  const handlePlanModified = useCallback(() => {
-    setIsPlanSaved(false);
-  }, []);
-  
-  const handleSaveVenture = useCallback(() => {
-    if (!productPlan) return;
-
-    let ventureName = '';
-    let ventureToUpdate: SavedVenture | undefined;
-
-    if (currentVentureId) {
-        ventureToUpdate = ventures.find(v => v.id === currentVentureId);
-        ventureName = ventureToUpdate?.name || productPlan.productTitle;
-    } else {
-        ventureName = prompt("Enter a name for your new venture:", productPlan.productTitle) || '';
-        if (!ventureName) return; // User cancelled
-    }
-
-    const ventureData = { 
-        plan: productPlan, 
-        brandVoice,
-        goals: smartGoals,
-        logoImageUrl,
-        brandKit,
-        analysis,
-        swotAnalysis,
-        customerPersona,
-        personaAvatarUrl,
-        marketingPlan,
-        financials,
-        supplierQuotes,
-        nextSteps,
-        chatHistory,
-        storefrontMockupUrl,
-        shopifyIntegration,
-        contentStrategy,
-        priceHistory: generateMockPriceHistory(productPlan.priceCents)
+        try {
+            const goals = await generateSmartGoals(productIdea, brandVoice);
+            setSmartGoals(goals);
+        } catch (err) {
+            console.error(err);
+            setInputError('Failed to generate a plan. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    let newVentures: SavedVenture[];
-    let newVentureId = currentVentureId;
-
-    if (ventureToUpdate) {
-        // Update existing venture
-        const updatedVenture = { ...ventureToUpdate, name: ventureName, lastModified: new Date().toISOString(), data: ventureData };
-        newVentures = ventures.map(v => v.id === currentVentureId ? updatedVenture : v);
-    } else {
-        // Create new venture
-        newVentureId = Date.now().toString();
-        const newVenture: SavedVenture = {
-            id: newVentureId,
-            name: ventureName,
-            lastModified: new Date().toISOString(),
-            data: ventureData
-        };
-        newVentures = [...ventures, newVenture];
-    }
-    
-    setVentures(newVentures);
-    setCurrentVentureId(newVentureId);
-    localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
-    setIsPlanSaved(true);
-
-  }, [productPlan, brandVoice, smartGoals, logoImageUrl, brandKit, analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan, financials, supplierQuotes, nextSteps, chatHistory, storefrontMockupUrl, shopifyIntegration, contentStrategy, ventures, currentVentureId]);
-
-
-  const handleLoadVenture = useCallback((ventureId: string) => {
-    const ventureToLoad = ventures.find(v => v.id === ventureId);
-    if (ventureToLoad) {
-      const data = ventureToLoad.data;
-      resetAllOutputs();
-      setProductPlan(data.plan);
-      setProductIdea(data.plan.productTitle);
-      setBrandVoice(data.brandVoice || 'Knowledgeable & Trustworthy Dad');
-      setSmartGoals(data.goals || null);
-      setLogoImageUrl(data.logoImageUrl || null);
-      setBrandKit(data.brandKit || null);
-      setAnalysis(data.analysis || null);
-      setSwotAnalysis(data.swotAnalysis || null);
-      setCustomerPersona(data.customerPersona || null);
-      setPersonaAvatarUrl(data.personaAvatarUrl || null);
-      setMarketingPlan(data.marketingPlan || null);
-      setFinancials(data.financials || null);
-      setSupplierQuotes(data.supplierQuotes || []);
-      setNextSteps(data.nextSteps || null);
-      setChatHistory(data.chatHistory || null);
-      setStorefrontMockupUrl(data.storefrontMockupUrl || null);
-      setShopifyIntegration(data.shopifyIntegration || null);
-      setContentStrategy(data.contentStrategy || null);
-      setCurrentVentureId(ventureToLoad.id);
-      setIsPlanSaved(true);
-      setError(null);
-      setCurrentStep(2); // Start at the blueprint step
-      setIsDashboardVisible(false);
-    }
-  }, [ventures]);
-
-  const handleRenameVenture = (ventureId: string, newName: string) => {
-    const newVentures = ventures.map(v => v.id === ventureId ? { ...v, name: newName, lastModified: new Date().toISOString() } : v);
-    setVentures(newVentures);
-    localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
-  };
-  
-  const handleDeleteVenture = (ventureId: string) => {
-    if (confirm("Are you sure you want to delete this venture? This action cannot be undone.")) {
-        const newVentures = ventures.filter(v => v.id !== ventureId);
-        setVentures(newVentures);
-        localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
-        if (currentVentureId === ventureId) {
-            handleStartOver();
+    const handleProceedToBlueprint = async () => {
+        setIsLoading(true);
+        try {
+            // Passing empty array for initial generation
+            const { plan: newPlan, smartGoals: newGoals } = await generateProductPlan(productIdea, brandVoice, []);
+            // Use the goals from the previous step if available, otherwise use newly generated ones
+            setSmartGoals(smartGoals || newGoals); 
+            setPlan(newPlan);
+            
+            const newVentureId = Date.now().toString();
+            setVentureId(newVentureId);
+            setVentureName(newPlan.productTitle);
+            
+            setCurrentStep(2);
+        } catch (err) {
+            console.error(err);
+            setInputError('Failed to generate the blueprint. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
-    }
-  };
+    };
 
-  const handleStartOver = () => {
-    setProductIdea('');
-    resetAllOutputs();
-    setCurrentStep(1);
-  };
+    const handleExampleClick = (prompt: string) => {
+        setProductIdea(prompt);
+        setInputError(null);
+    };
 
-  const handleExampleClick = (prompt: string) => { setProductIdea(prompt); setInputError(null); };
+    const updatePlan = (updatedPlan: ProductPlan) => {
+        setPlan(updatedPlan);
+        onPlanModified();
 
-  const handleSelectScoutedIdea = (idea: string) => {
-    setProductIdea(idea);
-    setInputError(null);
-    setIsScoutVisible(false);
-  };
+        // Update price history
+        const today = new Date().toISOString().split('T')[0];
+        const newHistory = [...priceHistory.filter(p => p.date !== today), { date: today, priceCents: updatedPlan.priceCents }];
+        // Keep last 30 days
+        if (newHistory.length > 30) {
+            newHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            newHistory.length = 30;
+        }
+        setPriceHistory(newHistory);
+    };
+    
+    const handleSavePlan = () => {
+        if (!ventureId || !plan) return;
 
-  const steps = ["Idea", "Blueprint", "Market", "Launchpad"];
-  
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <Step1Idea
-            productIdea={productIdea}
-            onProductIdeaChange={handleProductIdeaChange}
-            handleGeneratePlan={handleGeneratePlan}
-            isLoading={isLoading}
-            inputError={inputError}
-            handleExampleClick={handleExampleClick}
-            brandVoice={brandVoice}
-            setBrandVoice={setBrandVoice}
-            onShowScout={() => setIsScoutVisible(true)}
-            smartGoals={smartGoals}
-            onProceedToBlueprint={() => setCurrentStep(2)}
-          />
-        );
-      case 2:
-        return productPlan && (
-          <Step2Blueprint
-            plan={productPlan}
-            productIdea={productIdea}
-            brandVoice={brandVoice}
-            onPlanChange={handlePlanChange}
-            logoImageUrl={logoImageUrl}
-            setLogoImageUrl={setLogoImageUrl}
-            brandKit={brandKit}
-            setBrandKit={setBrandKit}
-            onSavePlan={handleSaveVenture}
-            isPlanSaved={isPlanSaved}
-            onNavigateToMarket={() => setCurrentStep(3)}
-            onBack={() => setCurrentStep(1)}
-          />
-        );
-      case 3:
-        return productPlan && (
-          <Step3Market
-            productPlan={productPlan}
-            productIdea={productIdea}
-            brandVoice={brandVoice}
-            analysis={analysis}
-            setAnalysis={setAnalysis}
-            swotAnalysis={swotAnalysis}
-            setSwotAnalysis={setSwotAnalysis}
-            customerPersona={customerPersona}
-            setCustomerPersona={setCustomerPersona}
-            personaAvatarUrl={personaAvatarUrl}
-            setPersonaAvatarUrl={setPersonaAvatarUrl}
-            onNavigateToLaunchpad={() => setCurrentStep(4)}
-            onBack={() => setCurrentStep(2)}
-          />
-        );
-      case 4:
-          return productPlan && (
-            <Step4Launchpad
-                productPlan={productPlan}
-                brandVoice={brandVoice}
-                marketingPlan={marketingPlan}
-                setMarketingPlan={setMarketingPlan}
-                financials={financials}
-                setFinancials={setFinancials}
-                supplierQuotes={supplierQuotes}
-                setSupplierQuotes={setSupplierQuotes}
-                nextSteps={nextSteps}
-                setNextSteps={setNextSteps}
-                chatHistory={chatHistory}
-                setChatHistory={setChatHistory}
-                onBack={() => setCurrentStep(3)}
-                onStartOver={handleStartOver}
-                isPlanSaved={isPlanSaved}
-                onSavePlan={handleSaveVenture}
-                onPlanModified={handlePlanModified}
-                logoImageUrl={logoImageUrl}
-                analysis={analysis}
-                brandKit={brandKit}
-                storefrontMockupUrl={storefrontMockupUrl}
-                setStorefrontMockupUrl={setStorefrontMockupUrl}
-                shopifyIntegration={shopifyIntegration}
-                setShopifyIntegration={setShopifyIntegration}
-                contentStrategy={contentStrategy}
-                setContentStrategy={setContentStrategy}
-                customerPersona={customerPersona}
-            />
-          );
-      default:
-        return <div>Invalid Step</div>;
-    }
-  };
+        const currentAppData: AppData = {
+            productIdea, brandVoice, smartGoals, plan, logoImageUrl, brandKit,
+            analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan,
+            financials, nextSteps, chatHistory, storefrontMockupUrl, contentStrategy,
+            shopifyIntegration, supplierQuotes, priceHistory
+        };
 
-  return (
-    <div className="min-h-screen flex flex-col text-slate-800 dark:text-slate-200">
-      <Header onShowVentures={() => setIsDashboardVisible(true)} hasVentures={ventures.length > 0} />
-       {isDashboardVisible && (
-        <MyVenturesDashboard
-          ventures={ventures}
-          onLoad={handleLoadVenture}
-          onRename={handleRenameVenture}
-          onDelete={handleDeleteVenture}
-          onClose={() => setIsDashboardVisible(false)}
-        />
-      )}
-      {isScoutVisible && (
-        <ProductScout
-          onClose={() => setIsScoutVisible(false)}
-          onSelectIdea={handleSelectScoutedIdea}
-        />
-      )}
-      <main className="flex-grow container mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
-        <ProgressBar currentStep={currentStep} steps={steps} />
-        {error && (
-            <div className="w-full max-w-3xl bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center mb-8" role="alert">
-              <p>{error}</p>
-            </div>
-        )}
-        {renderStepContent()}
-      </main>
-      <Footer />
-    </div>
-  );
+        const newVenture: SavedVenture = {
+            id: ventureId,
+            name: ventureName || plan.productTitle,
+            lastModified: new Date().toISOString(),
+            data: currentAppData
+        };
+
+        const updatedVentures = savedVentures.filter(v => v.id !== ventureId);
+        setSavedVentures([...updatedVentures, newVenture]);
+        localStorage.setItem('dad-ecommerce-ventures', JSON.stringify([...updatedVentures, newVenture]));
+        setIsPlanSaved(true);
+    };
+
+    const loadVenture = (ventureId: string) => {
+        const ventureToLoad = savedVentures.find(v => v.id === ventureId);
+        if (ventureToLoad) {
+            const { data } = ventureToLoad;
+            setVentureId(ventureToLoad.id);
+            setVentureName(ventureToLoad.name);
+            setProductIdea(data.productIdea);
+            setBrandVoice(data.brandVoice);
+            setSmartGoals(data.smartGoals);
+            setPlan(data.plan);
+            setLogoImageUrl(data.logoImageUrl);
+            setBrandKit(data.brandKit);
+            setAnalysis(data.analysis);
+            setSwotAnalysis(data.swotAnalysis);
+            setCustomerPersona(data.customerPersona);
+            setPersonaAvatarUrl(data.personaAvatarUrl);
+            setMarketingPlan(data.marketingPlan);
+            setFinancials(data.financials);
+            setNextSteps(data.nextSteps);
+            setChatHistory(data.chatHistory || []);
+            setStorefrontMockupUrl(data.storefrontMockupUrl || null);
+            setContentStrategy(data.contentStrategy || null);
+            setShopifyIntegration(data.shopifyIntegration || null);
+            setSupplierQuotes(data.supplierQuotes || []);
+            setPriceHistory(data.priceHistory || []);
+            
+            setIsPlanSaved(true);
+            setCurrentStep(2); // Go to blueprint step after loading
+            setShowVentures(false);
+        }
+    };
+    
+    const renameVenture = (ventureId: string, newName: string) => {
+        const updatedVentures = savedVentures.map(v => v.id === ventureId ? { ...v, name: newName, lastModified: new Date().toISOString() } : v);
+        setSavedVentures(updatedVentures);
+        localStorage.setItem('dad-ecommerce-ventures', JSON.stringify(updatedVentures));
+        if(ventureId === ventureId) {
+            setVentureName(newName);
+        }
+    };
+
+    const deleteVenture = (ventureId: string) => {
+        const updatedVentures = savedVentures.filter(v => v.id !== ventureId);
+        setSavedVentures(updatedVentures);
+        localStorage.setItem('dad-ecommerce-ventures', JSON.stringify(updatedVentures));
+        if (ventureId === ventureId) {
+            resetState();
+        }
+    };
+
+    const handleSelectScoutIdea = (idea: string) => {
+        setProductIdea(idea);
+        setShowScout(false);
+        setInputError(null);
+    };
+
+    const steps = ['Idea & Goals', 'Blueprint', 'Market Analysis', 'Launchpad'];
+
+    return (
+        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 font-sans">
+            <Header onShowVentures={() => setShowVentures(true)} hasVentures={savedVentures.length > 0} />
+            <main className="flex-grow container mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
+                <ProgressBar currentStep={currentStep} steps={steps} />
+                
+                {currentStep === 1 && (
+                    <Step1Idea
+                        productIdea={productIdea}
+                        onProductIdeaChange={handleProductIdeaChange}
+                        handleGeneratePlan={handleGeneratePlan}
+                        isLoading={isLoading}
+                        inputError={inputError}
+                        handleExampleClick={handleExampleClick}
+                        brandVoice={brandVoice}
+                        setBrandVoice={setBrandVoice}
+                        onShowScout={() => setShowScout(true)}
+                        smartGoals={smartGoals}
+                        onProceedToBlueprint={handleProceedToBlueprint}
+                    />
+                )}
+                {currentStep === 2 && plan && (
+                    <Step2Blueprint
+                        plan={plan}
+                        productIdea={productIdea}
+                        brandVoice={brandVoice}
+                        onPlanChange={updatePlan}
+                        logoImageUrl={logoImageUrl}
+                        setLogoImageUrl={(url) => { setLogoImageUrl(url); onPlanModified(); }}
+                        brandKit={brandKit}
+                        setBrandKit={(kit) => { setBrandKit(kit); onPlanModified(); }}
+                        onSavePlan={handleSavePlan}
+                        isPlanSaved={isPlanSaved}
+                        onNavigateToMarket={() => setCurrentStep(3)}
+                        onBack={() => setCurrentStep(1)}
+                    />
+                )}
+                 {currentStep === 3 && plan && (
+                    <Step3Market
+                        productPlan={plan}
+                        productIdea={productIdea}
+                        brandVoice={brandVoice}
+                        analysis={analysis}
+                        setAnalysis={(a) => { setAnalysis(a); onPlanModified(); }}
+                        swotAnalysis={swotAnalysis}
+                        setSwotAnalysis={(s) => { setSwotAnalysis(s); onPlanModified(); }}
+                        customerPersona={customerPersona}
+                        setCustomerPersona={(p) => { setCustomerPersona(p); onPlanModified(); }}
+                        personaAvatarUrl={personaAvatarUrl}
+                        setPersonaAvatarUrl={(url) => { setPersonaAvatarUrl(url); onPlanModified(); }}
+                        onNavigateToLaunchpad={() => setCurrentStep(4)}
+                        onBack={() => setCurrentStep(2)}
+                    />
+                )}
+                {currentStep === 4 && plan && (
+                    <Step4Launchpad
+                        productPlan={plan}
+                        brandVoice={brandVoice}
+                        competitiveAnalysis={analysis}
+                        customerPersona={customerPersona}
+                        logoImageUrl={logoImageUrl}
+                        marketingPlan={marketingPlan}
+                        setMarketingPlan={setMarketingPlan}
+                        financials={financials}
+                        setFinancials={setFinancials}
+                        nextSteps={nextSteps}
+                        setNextSteps={setNextSteps}
+                        chatHistory={chatHistory}
+                        setChatHistory={setChatHistory}
+                        storefrontMockupUrl={storefrontMockupUrl}
+                        setStorefrontMockupUrl={setStorefrontMockupUrl}
+                        contentStrategy={contentStrategy}
+                        setContentStrategy={setContentStrategy}
+                        shopifyIntegration={shopifyIntegration}
+                        setShopifyIntegration={setShopifyIntegration}
+                        supplierQuotes={supplierQuotes}
+                        setSupplierQuotes={setSupplierQuotes}
+                        onPlanModified={onPlanModified}
+                        onBack={() => setCurrentStep(3)}
+                    />
+                )}
+            </main>
+            <Footer />
+            {showVentures && (
+                <MyVenturesDashboard
+                    ventures={savedVentures}
+                    onLoad={loadVenture}
+                    onRename={renameVenture}
+                    onDelete={deleteVenture}
+                    onClose={() => setShowVentures(false)}
+                />
+            )}
+             {showScout && (
+                <ProductScout
+                    onClose={() => setShowScout(false)}
+                    onSelectIdea={handleSelectScoutIdea}
+                />
+            )}
+        </div>
+    );
 };
 
 export default App;

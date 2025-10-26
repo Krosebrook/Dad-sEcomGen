@@ -1,33 +1,89 @@
-// FIX: Replaced component code with proper type definitions.
 export interface ProductVariant {
-    title: string;
-    sku: string;
-    priceCents: number;
-    stock: number;
-}
-
-export interface PriceHistoryPoint {
-    date: string;
-    priceCents: number;
+  title: string;
+  sku: string;
+  priceCents: number;
+  stock: number;
 }
 
 export interface ProductPlan {
-    productTitle: string;
-    slug: string;
-    description: string;
-    priceCents: number;
-    currency: string;
-    sku: string;
-    stock: number;
-    tags: string[];
-    variants: ProductVariant[];
+  productTitle: string;
+  slug: string;
+  description: string;
+  priceCents: number;
+  currency: string;
+  sku: string;
+  stock: number;
+  variants: ProductVariant[];
+  tags: string[];
 }
 
 export type RegenerateableSection = 'description' | 'variants' | 'tags';
 
+export interface SocialMediaPost {
+  platform: string;
+  postText: string;
+  hashtags: string[];
+  visualPrompt: string;
+}
+
+export interface AdCopy {
+  platform: string;
+  headlines: string[];
+  descriptions: string[];
+}
+
+export interface LaunchEmail {
+  subject: string;
+  body: string;
+}
+
+export interface MarketingKickstart {
+  socialMediaPosts: SocialMediaPost[];
+  adCopy: AdCopy[];
+  launchEmail: LaunchEmail;
+}
+
+export interface Competitor {
+  name: string;
+  estimatedPriceRange: string;
+  strengths: string[];
+  weaknesses: string[];
+}
+
 export interface GroundingSource {
     uri: string;
     title: string;
+}
+
+export interface CompetitiveAnalysis {
+  opportunityScore: number;
+  marketSummary: string;
+  competitors: Competitor[];
+  differentiationStrategies: string[];
+  sources: GroundingSource[];
+}
+
+export type FinancialScenario = 'Pessimistic' | 'Realistic' | 'Optimistic';
+
+export interface FinancialProjections {
+  scenario: FinancialScenario;
+  sellingPriceCents: number;
+  costOfGoodsSoldCents: number;
+  estimatedMonthlySales: number;
+  monthlyMarketingBudgetCents: number;
+}
+
+export interface SMARTGoalDetail {
+    title: string;
+    description: string;
+}
+
+export interface SMARTGoals {
+    specific: SMARTGoalDetail;
+    measurable: SMARTGoalDetail;
+    achievable: SMARTGoalDetail;
+    relevant: SMARTGoalDetail;
+    timeBound: SMARTGoalDetail;
 }
 
 export interface BrandIdentityKit {
@@ -41,19 +97,6 @@ export interface BrandIdentityKit {
         bodyFont: string;
     };
     missionStatement: string;
-}
-
-export interface CompetitiveAnalysis {
-    opportunityScore: number;
-    marketSummary: string;
-    competitors: {
-        name: string;
-        strengths: string[];
-        weaknesses: string[];
-        estimatedPriceRange: string;
-    }[];
-    differentiationStrategies: string[];
-    sources?: GroundingSource[];
 }
 
 export interface SWOTAnalysis {
@@ -76,120 +119,43 @@ export interface CustomerPersona {
     avatarPrompt: string;
 }
 
-export interface MarketingKickstart {
-    socialMediaPosts: {
-        platform: string;
-        postText: string;
-        hashtags: string[];
-        visualPrompt: string;
-    }[];
-    adCopy: {
-        platform: string;
-        headlines: string[];
-        descriptions: string[];
-    }[];
-    launchEmail: {
-        subject: string;
-        body: string;
-    };
-}
-
-export type FinancialScenario = 'Realistic' | 'Pessimistic' | 'Optimistic';
-
-export interface FinancialAssumptions {
-    costOfGoodsSoldCents: number;
-    monthlyMarketingBudgetCents: number;
-    estimatedMonthlySales: number;
-    scenario: FinancialScenario;
-}
-
-export interface FinancialProjections {
-    sellingPriceCents: number;
-    costOfGoodsSoldCents: number;
-    estimatedMonthlySales: number;
-    monthlyMarketingBudgetCents: number;
-    scenario: FinancialScenario;
-}
-
 export interface NextStepItem {
-    text: string;
-    completed: boolean;
+  text: string;
+  completed: boolean;
 }
 
-export interface ChatMessage {
-    role: 'user' | 'model';
-    content: string;
-}
-
-export interface SMARTGoal {
-    title: string;
-    description: string;
-}
-
-export interface SMARTGoals {
-    specific: SMARTGoal;
-    measurable: SMARTGoal;
-    achievable: SMARTGoal;
-    relevant: SMARTGoal;
-    timeBound: SMARTGoal;
-}
-
-export interface ShopifyIntegration {
-    storeUrl: string;
-    apiToken: string;
-    lastPushStatus: 'success' | 'failed' | null;
-    lastPushDate: string | null;
-    lastPushedProductId: string | null;
-}
-
-export interface DailyPostIdea {
-    platform: string;
-    idea: string;
-}
-
-export interface WeeklyTheme {
-    week: number;
-    theme: string;
-    dailyPosts: DailyPostIdea[];
-}
-
-export interface ContentStrategy {
-    seoKeywordPack: string[];
-    contentCalendar: WeeklyTheme[];
-    blogPostIdeas: string[];
-}
-
-export interface SupplierQuote {
-    id: string;
-    name: string;
-    pricePerUnitCents: number;
-    moq: number;
+export interface AppData {
+    productIdea: string;
+    brandVoice: string;
+    smartGoals: SMARTGoals | null;
+    plan: ProductPlan;
+    logoImageUrl: string | null;
+    brandKit: BrandIdentityKit | null;
+    analysis: CompetitiveAnalysis | null;
+    swotAnalysis: SWOTAnalysis | null;
+    customerPersona: CustomerPersona | null;
+    personaAvatarUrl: string | null;
+    marketingPlan: MarketingKickstart | null;
+    financials: FinancialProjections | null;
+    nextSteps: NextStepItem[];
+    chatHistory: ChatMessage[];
+    storefrontMockupUrl: string | null;
+    contentStrategy: ContentStrategy | null;
+    shopifyIntegration: ShopifyIntegration | null;
+    supplierQuotes: SupplierQuote[];
+    priceHistory: PriceHistoryPoint[];
 }
 
 export interface SavedVenture {
-    id: string;
+    id: string; // timestamp
     name: string;
-    lastModified: string;
-    data: {
-        plan: ProductPlan;
-        brandVoice: string;
-        goals: SMARTGoals | null;
-        logoImageUrl: string | null;
-        brandKit: BrandIdentityKit | null;
-        analysis: CompetitiveAnalysis | null;
-        swotAnalysis: SWOTAnalysis | null;
-        customerPersona: CustomerPersona | null;
-        personaAvatarUrl: string | null;
-        marketingPlan: MarketingKickstart | null;
-        financials: FinancialProjections | null;
-        supplierQuotes: SupplierQuote[] | null;
-        nextSteps: NextStepItem[] | null;
-        chatHistory: ChatMessage[] | null;
-        storefrontMockupUrl: string | null;
-        priceHistory: PriceHistoryPoint[] | null;
-        shopifyIntegration: ShopifyIntegration | null;
-        contentStrategy: ContentStrategy | null;
-    }
+    lastModified: string; // ISO string
+    data: AppData;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
 }
 
 export interface ProductScoutResult {
@@ -206,5 +172,37 @@ export interface ProductScoutResult {
         shippingRecommendation: string;
         complianceChecklist: string[];
     };
-    sources?: GroundingSource[];
+}
+
+export interface ShopifyIntegration {
+    storeUrl: string;
+    apiToken: string;
+    lastPushStatus: 'success' | 'failed' | null;
+    lastPushDate: string | null;
+    lastPushedProductId: string | null;
+}
+
+export interface SupplierQuote {
+    id: string;
+    name: string;
+    pricePerUnitCents: number;
+    moq: number;
+}
+
+export interface ContentStrategy {
+    seoKeywordPack: string[];
+    blogPostIdeas: string[];
+    contentCalendar: {
+        week: number;
+        theme: string;
+        dailyPosts: {
+            platform: string;
+            idea: string;
+        }[];
+    }[];
+}
+
+export interface PriceHistoryPoint {
+    date: string; // ISO date string
+    priceCents: number;
 }

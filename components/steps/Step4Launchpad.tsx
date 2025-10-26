@@ -1,45 +1,54 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage, CompetitiveAnalysis, BrandIdentityKit, ShopifyIntegration, ContentStrategy, CustomerPersona, FinancialScenario, SupplierQuote } from '../../types';
-import { generateMarketingKickstart, generateFinancialAssumptions, generateNextSteps, generateStorefrontMockup } from '../../services/geminiService';
+// FIX: Correctly import types from the central types file.
+import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, ContentStrategy, ShopifyIntegration, SupplierQuote } from '../../types';
+// FIX: Correctly import services from the geminiService file.
+import { generateMarketingPlan, generateFinancialProjections, generateNextSteps, generateStorefrontMockup } from '../../services/geminiService';
+
 import MarketingKickstartCard from '../MarketingKickstartCard';
 import FinancialProjectionsCard from '../FinancialProjectionsCard';
 import NextStepsCard from '../NextStepsCard';
 import ChatCard from '../ChatCard';
-import StorefrontMockupCard from '../StorefrontMockupCard';
-import ShopifyIntegrationCard from '../ShopifyIntegrationCard';
-import ContentStrategyCard from '../ContentStrategyCard';
-import SupplierTrackerCard from '../SupplierTrackerCard';
-import { Button } from '../ui/Button';
 import ExportControls from '../ExportControls';
+import StorefrontMockupCard from '../StorefrontMockupCard';
+import ContentStrategyCard from '../ContentStrategyCard';
+import ShopifyIntegrationCard from '../ShopifyIntegrationCard';
+import SupplierTrackerCard from '../SupplierTrackerCard';
+
+import { Button } from '../ui/Button';
 
 interface Step4LaunchpadProps {
     productPlan: ProductPlan;
     brandVoice: string;
+    competitiveAnalysis: CompetitiveAnalysis | null;
+    customerPersona: CustomerPersona | null;
+    logoImageUrl: string | null;
+    
     marketingPlan: MarketingKickstart | null;
     setMarketingPlan: React.Dispatch<React.SetStateAction<MarketingKickstart | null>>;
+    
     financials: FinancialProjections | null;
     setFinancials: React.Dispatch<React.SetStateAction<FinancialProjections | null>>;
-    supplierQuotes: SupplierQuote[];
-    setSupplierQuotes: React.Dispatch<React.SetStateAction<SupplierQuote[]>>;
-    nextSteps: NextStepItem[] | null;
-    setNextSteps: React.Dispatch<React.SetStateAction<NextStepItem[] | null>>;
-    chatHistory: ChatMessage[] | null;
-    setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[] | null>>;
-    onBack: () => void;
-    onStartOver: () => void;
-    isPlanSaved: boolean;
-    onSavePlan: () => void;
-    onPlanModified: () => void;
-    logoImageUrl: string | null;
-    analysis: CompetitiveAnalysis | null;
-    brandKit: BrandIdentityKit | null;
+
+    nextSteps: NextStepItem[];
+    setNextSteps: React.Dispatch<React.SetStateAction<NextStepItem[]>>;
+
+    chatHistory: ChatMessage[];
+    setChatHistory: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+
     storefrontMockupUrl: string | null;
     setStorefrontMockupUrl: React.Dispatch<React.SetStateAction<string | null>>;
-    shopifyIntegration: ShopifyIntegration | null;
-    setShopifyIntegration: React.Dispatch<React.SetStateAction<ShopifyIntegration | null>>;
+
     contentStrategy: ContentStrategy | null;
     setContentStrategy: React.Dispatch<React.SetStateAction<ContentStrategy | null>>;
-    customerPersona: CustomerPersona | null;
+    
+    shopifyIntegration: ShopifyIntegration | null;
+    setShopifyIntegration: React.Dispatch<React.SetStateAction<ShopifyIntegration | null>>;
+
+    supplierQuotes: SupplierQuote[];
+    setSupplierQuotes: React.Dispatch<React.SetStateAction<SupplierQuote[]>>;
+
+    onPlanModified: () => void;
+    onBack: () => void;
 }
 
 const LoadingSpinner = ({ message }: { message: string }) => (
@@ -52,111 +61,111 @@ const LoadingSpinner = ({ message }: { message: string }) => (
     </div>
 );
 
-const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
-    productPlan,
-    brandVoice,
-    marketingPlan,
-    setMarketingPlan,
-    financials,
-    setFinancials,
-    supplierQuotes,
-    setSupplierQuotes,
-    nextSteps,
-    setNextSteps,
-    chatHistory,
-    setChatHistory,
-    onBack,
-    onStartOver,
-    isPlanSaved,
-    onSavePlan,
-    onPlanModified,
-    logoImageUrl,
-    analysis,
-    brandKit,
-    storefrontMockupUrl,
-    setStorefrontMockupUrl,
-    shopifyIntegration,
-    setShopifyIntegration,
-    contentStrategy,
-    setContentStrategy,
-    customerPersona,
-}) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [isRegeneratingFinancials, setIsRegeneratingFinancials] = useState(false);
-    const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
 
+const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
+    const {
+        productPlan,
+        brandVoice,
+        competitiveAnalysis,
+        customerPersona,
+        logoImageUrl,
+        marketingPlan,
+        setMarketingPlan,
+        financials,
+        setFinancials,
+        nextSteps,
+        setNextSteps,
+        chatHistory,
+        setChatHistory,
+        storefrontMockupUrl,
+        setStorefrontMockupUrl,
+        contentStrategy,
+        setContentStrategy,
+        shopifyIntegration,
+        setShopifyIntegration,
+        supplierQuotes,
+        setSupplierQuotes,
+        onPlanModified,
+        onBack
+    } = props;
+
+    const [isLoading, setIsLoading] = useState(false);
+    const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
+    const [isRegeneratingFinancials, setIsRegeneratingFinancials] = useState(false);
 
     useEffect(() => {
-        if (!marketingPlan && !financials && !nextSteps && productPlan) {
-            const fetchLaunchpadAssets = async () => {
+        const fetchLaunchpadData = async () => {
+            if (productPlan && (!marketingPlan || !financials || nextSteps.length === 0)) {
                 setIsLoading(true);
-                setError(null);
                 try {
-                    const [marketingResult, financialResult, nextStepsResult] = await Promise.all([
-                        generateMarketingKickstart(productPlan, brandVoice),
-                        generateFinancialAssumptions(productPlan, 'Realistic'),
-                        generateNextSteps(productPlan, brandVoice)
+                    const [marketing, financial, steps] = await Promise.all([
+                        marketingPlan ? Promise.resolve(marketingPlan) : generateMarketingPlan(productPlan, brandVoice),
+                        financials ? Promise.resolve(financials) : generateFinancialProjections(productPlan, 'Realistic'),
+                        nextSteps.length > 0 ? Promise.resolve(nextSteps) : generateNextSteps(productPlan, brandVoice),
                     ]);
-                    setMarketingPlan(marketingResult);
-                    setFinancials({
-                        ...financialResult,
-                        sellingPriceCents: productPlan.priceCents,
-                    });
-                    setSupplierQuotes([]);
-                    setNextSteps(nextStepsResult.map(text => ({ text, completed: false })));
-                    setChatHistory([]); // Initialize chat history
-                } catch (err) {
-                    console.error(err);
-                    setError('Failed to generate launchpad assets. Please try again.');
+                    setMarketingPlan(marketing);
+                    setFinancials(financial);
+                    setNextSteps(steps);
+                    onPlanModified();
+                } catch (error) {
+                    console.error("Failed to generate launchpad data:", error);
                 } finally {
                     setIsLoading(false);
                 }
-            };
-            fetchLaunchpadAssets();
-        } else {
-             if (chatHistory === null) setChatHistory([]);
-             if (supplierQuotes === null) setSupplierQuotes([]);
-        }
-    }, [marketingPlan, financials, nextSteps, productPlan, chatHistory, supplierQuotes, setMarketingPlan, setFinancials, setSupplierQuotes, setNextSteps, setChatHistory, brandVoice]);
-    
-    const handleFinancialScenarioChange = useCallback(async (scenario: FinancialScenario) => {
-        if (!productPlan) return;
-        setIsRegeneratingFinancials(true);
-        setError(null);
+            }
+        };
+
+        fetchLaunchpadData();
+    }, [productPlan, marketingPlan, financials, nextSteps.length, brandVoice, setMarketingPlan, setFinancials, setNextSteps, onPlanModified]);
+
+    const handleGenerateMockup = useCallback(async () => {
+        if (!productPlan || !logoImageUrl) return;
+        setIsGeneratingMockup(true);
         try {
-            const newAssumptions = await generateFinancialAssumptions(productPlan, scenario);
-            setFinancials({
-                sellingPriceCents: productPlan.priceCents,
-                ...newAssumptions
-            });
+            const url = await generateStorefrontMockup(productPlan, logoImageUrl);
+            setStorefrontMockupUrl(url);
             onPlanModified();
-        } catch (err) {
-            console.error("Failed to regenerate financials", err);
-            setError('Failed to regenerate financial assumptions. Please try again.');
+        } catch (error) {
+            console.error("Failed to generate mockup:", error);
+        } finally {
+            setIsGeneratingMockup(false);
+        }
+    }, [productPlan, logoImageUrl, setStorefrontMockupUrl, onPlanModified]);
+    
+    const handleScenarioChange = useCallback(async (scenario: FinancialScenario) => {
+        setIsRegeneratingFinancials(true);
+        try {
+            const newFinancials = await generateFinancialProjections(productPlan, scenario);
+            setFinancials(newFinancials);
+            onPlanModified();
+        } catch (error) {
+            console.error("Failed to regenerate financials:", error);
         } finally {
             setIsRegeneratingFinancials(false);
         }
     }, [productPlan, setFinancials, onPlanModified]);
 
-    const handleGenerateMockup = useCallback(async () => {
-        if (!productPlan || !brandKit) return;
-        setIsGeneratingMockup(true);
-        setError(null);
-        try {
-            const mockupUrl = await generateStorefrontMockup(productPlan, brandKit);
-            setStorefrontMockupUrl(mockupUrl);
-            onPlanModified();
-        } catch (err) {
-            console.error("Failed to generate mockup", err);
-            setError('Failed to generate storefront mockup. Please try again.');
-        } finally {
-            setIsGeneratingMockup(false);
-        }
-    }, [productPlan, brandKit, setStorefrontMockupUrl, onPlanModified]);
+    const handleToggleNextStep = (index: number) => {
+        const newSteps = [...nextSteps];
+        newSteps[index].completed = !newSteps[index].completed;
+        setNextSteps(newSteps);
+        onPlanModified();
+    };
 
-    const handleFinancialsChange = (newFinancials: FinancialProjections) => {
-        setFinancials(newFinancials);
+    const handleAddTask = (text: string) => {
+        setNextSteps([...nextSteps, { text, completed: false }]);
+        onPlanModified();
+    };
+
+    const handleEditTask = (index: number, text: string) => {
+        const newSteps = [...nextSteps];
+        newSteps[index].text = text;
+        setNextSteps(newSteps);
+        onPlanModified();
+    };
+
+    const handleDeleteTask = (index: number) => {
+        setNextSteps(nextSteps.filter((_, i) => i !== index));
         onPlanModified();
     };
 
@@ -165,131 +174,32 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
         onPlanModified();
     };
 
-    const handleToggleNextStep = useCallback((index: number) => {
-        if (nextSteps) {
-            const newNextSteps = [...nextSteps];
-            newNextSteps[index].completed = !newNextSteps[index].completed;
-            setNextSteps(newNextSteps);
-            onPlanModified();
-        }
-    }, [nextSteps, setNextSteps, onPlanModified]);
-
-    const handleAddTask = useCallback((text: string) => {
-        const newItem: NextStepItem = { text, completed: false };
-        setNextSteps(prev => (prev ? [...prev, newItem] : [newItem]));
-        onPlanModified();
-    }, [setNextSteps, onPlanModified]);
-
-    const handleEditTask = useCallback((index: number, text: string) => {
-        if (nextSteps) {
-            const newNextSteps = [...nextSteps];
-            newNextSteps[index].text = text;
-            setNextSteps(newNextSteps);
-            onPlanModified();
-        }
-    }, [nextSteps, setNextSteps, onPlanModified]);
-
-    const handleDeleteTask = useCallback((index: number) => {
-        if (nextSteps) {
-            const newNextSteps = nextSteps.filter((_, i) => i !== index);
-            setNextSteps(newNextSteps);
-            onPlanModified();
-        }
-    }, [nextSteps, setNextSteps, onPlanModified]);
-
-    const handleHistoryChange = useCallback((newHistory: ChatMessage[]) => {
-        setChatHistory(newHistory);
-        onPlanModified();
-    }, [setChatHistory, onPlanModified]);
-
+    if (isLoading) {
+        return <div className="w-full max-w-4xl space-y-8 animate-fade-in"><LoadingSpinner message="Building your launchpad..." /></div>;
+    }
 
     return (
         <div className="w-full max-w-4xl space-y-8 animate-fade-in">
-             <div className="flex justify-end">
-                <Button onClick={onSavePlan} disabled={isPlanSaved} variant={isPlanSaved ? "outline" : "default"} className="px-4 py-2 text-sm">
-                    {isPlanSaved ? '✔ Plan Saved' : 'Save Plan'}
-                </Button>
-            </div>
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
-                    <p>{error}</p>
-                </div>
-            )}
-            {isLoading && <LoadingSpinner message="Building your launchpad..." />}
-            {!isLoading && (
-                <>
-                    <ExportControls 
-                        productPlan={productPlan}
-                        logoImageUrl={logoImageUrl}
-                        analysis={analysis}
-                        marketingPlan={marketingPlan}
-                        financials={financials}
-                        nextSteps={nextSteps}
-                    />
-                    <ShopifyIntegrationCard
-                        productPlan={productPlan}
-                        logoImageUrl={logoImageUrl}
-                        storefrontMockupUrl={storefrontMockupUrl}
-                        integrationConfig={shopifyIntegration}
-                        setIntegrationConfig={setShopifyIntegration}
-                        onPlanModified={onPlanModified}
-                    />
-                     {brandKit && (
-                        <StorefrontMockupCard
-                            onGenerate={handleGenerateMockup}
-                            isGenerating={isGeneratingMockup}
-                            mockupUrl={storefrontMockupUrl}
-                        />
-                    )}
-                    {marketingPlan && customerPersona && (
-                        <ContentStrategyCard
-                            productPlan={productPlan}
-                            customerPersona={customerPersona}
-                            brandVoice={brandVoice}
-                            contentStrategy={contentStrategy}
-                            setContentStrategy={setContentStrategy}
-                            onPlanModified={onPlanModified}
-                        />
-                    )}
-                     {financials && productPlan && (
-                        <FinancialProjectionsCard 
-                            financials={financials} 
-                            onFinancialsChange={handleFinancialsChange} 
-                            currency={productPlan.currency} 
-                            onScenarioChange={handleFinancialScenarioChange}
-                            isRegenerating={isRegeneratingFinancials}
-                        />
-                    )}
-                    {productPlan && (
-                        <SupplierTrackerCard 
-                            quotes={supplierQuotes} 
-                            onQuotesChange={handleSupplierQuotesChange}
-                            currency={productPlan.currency}
-                        />
-                    )}
-                    {chatHistory && productPlan && (
-                        <ChatCard 
-                            productPlan={productPlan}
-                            brandVoice={brandVoice}
-                            history={chatHistory}
-                            onHistoryChange={handleHistoryChange}
-                        />
-                    )}
-                    {nextSteps && (
-                        <NextStepsCard 
-                            items={nextSteps} 
-                            onToggle={handleToggleNextStep}
-                            onAddTask={handleAddTask}
-                            onEditTask={handleEditTask}
-                            onDeleteTask={handleDeleteTask}
-                        />
-                    )}
-                    {marketingPlan && <MarketingKickstartCard marketingPlan={marketingPlan} />}
-                </>
-            )}
-            <div className="flex justify-between items-center pt-8">
+            {marketingPlan && <MarketingKickstartCard marketingPlan={marketingPlan} />}
+            {financials && <FinancialProjectionsCard financials={financials} onFinancialsChange={(f) => { setFinancials(f); onPlanModified(); }} currency={productPlan.currency} onScenarioChange={handleScenarioChange} isRegenerating={isRegeneratingFinancials} />}
+            {customerPersona && <ContentStrategyCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} contentStrategy={contentStrategy} setContentStrategy={setContentStrategy} onPlanModified={onPlanModified} />}
+            <StorefrontMockupCard onGenerate={handleGenerateMockup} isGenerating={isGeneratingMockup} mockupUrl={storefrontMockupUrl} />
+            <SupplierTrackerCard quotes={supplierQuotes} onQuotesChange={handleSupplierQuotesChange} currency={productPlan.currency} />
+            <ShopifyIntegrationCard 
+                productPlan={productPlan} 
+                logoImageUrl={logoImageUrl}
+                storefrontMockupUrl={storefrontMockupUrl}
+                integrationConfig={shopifyIntegration}
+                setIntegrationConfig={setShopifyIntegration}
+                onPlanModified={onPlanModified}
+            />
+            {nextSteps.length > 0 && <NextStepsCard items={nextSteps} onToggle={handleToggleNextStep} onAddTask={handleAddTask} onEditTask={handleEditTask} onDeleteTask={handleDeleteTask} />}
+            <ChatCard productPlan={productPlan} brandVoice={brandVoice} history={chatHistory} onHistoryChange={(h) => { setChatHistory(h); onPlanModified(); }} />
+            <ExportControls productPlan={productPlan} logoImageUrl={logoImageUrl} analysis={competitiveAnalysis} marketingPlan={marketingPlan} financials={financials} nextSteps={nextSteps} />
+            
+            <div className="flex justify-between items-center">
                 <Button variant="outline" onClick={onBack}>Back</Button>
-                <Button onClick={onStartOver} size="default">Start a New Plan</Button>
+                {/* No 'next' button, this is the final step */}
             </div>
         </div>
     );
