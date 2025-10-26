@@ -1,5 +1,5 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions } from '../types';
+import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
+import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -124,6 +124,18 @@ const financialAssumptionsSchema = {
     required: ['costOfGoodsSoldCents', 'monthlyMarketingBudgetCents']
 };
 
+const nextStepsSchema = {
+    type: Type.OBJECT,
+    properties: {
+        checklist: {
+            type: Type.ARRAY,
+            description: 'A list of 5-7 short, actionable next steps for the user to take.',
+            items: { type: Type.STRING },
+        },
+    },
+    required: ['checklist']
+};
+
 export const generateProductPlan = async (productIdea: string, variants?: ProductVariant[]): Promise<ProductPlan> => {
     const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
     
@@ -208,11 +220,12 @@ export const regeneratePlanSection = async (
 
 
 export const generateCompetitiveAnalysis = async (productIdea: string): Promise<CompetitiveAnalysis> => {
-    const systemInstruction = `You are an expert market research analyst specializing in e-commerce. A user has a product idea. Your task is to perform a competitive analysis using real-time Google Search data. Provide a concise, actionable "Competitive Intelligence" report. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+    // FIX: Updated prompt and removed responseSchema as googleSearch tool does not guarantee strict JSON output.
+    const systemInstruction = `You are an expert market research analyst specializing in e-commerce. A user has a product idea. Your task is to perform a competitive analysis using real-time Google Search data. Provide a concise, actionable "Competitive Intelligence" report. Your response MUST be a single, valid JSON object that conforms to the provided schema, wrapped in a markdown code block ('''json ... '''). Do not include any text, explanation, or markdown formatting before or after the JSON code block.`;
 
     const response = await ai.models.generateContent({
         model: TEXT_MODEL_NAME,
-        contents: `Provide a competitive intelligence report for this product idea: ${productIdea}`,
+        contents: `Provide a competitive intelligence report for this product idea: ${productIdea}. The JSON response should conform to this schema: ${JSON.stringify(competitiveAnalysisSchema)}`,
         config: {
             systemInstruction: systemInstruction,
             tools: [{googleSearch: {}}],
@@ -322,6 +335,64 @@ export const generateFinancialAssumptions = async (productPlan: ProductPlan): Pr
         console.error("Failed to parse Gemini response for financial assumptions:", jsonText, e);
         throw new Error("Received invalid JSON from the API.");
     }
+};
+
+export const generateNextSteps = async (productPlan: ProductPlan): Promise<string[]> => {
+    const systemInstruction = `You are a startup mentor and e-commerce expert. Based on the provided product plan, generate a checklist of the immediate next steps an entrepreneur should take to bring their product to life. The steps should be concise, actionable, and tangible. Your response MUST be a single, valid JSON object that conforms to the provided schema.`;
+    
+    const userContent = `Generate a next steps checklist for the following product:\n
+    Product Title: ${productPlan.productTitle}\n
+    Description: ${productPlan.description}`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: nextStepsSchema,
+        },
+    });
+    
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API for next steps.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson.checklist as string[];
+    } catch (e) {
+        console.error("Failed to parse Gemini response for next steps:", jsonText, e);
+        throw new Error("Received invalid JSON from the API for next steps.");
+    }
+};
+
+
+export const continueChat = async (productPlan: ProductPlan, history: ChatMessage[]): Promise<string> => {
+    const systemInstruction = `You are an expert e-commerce business consultant acting as an AI sounding board. The user has generated the following business plan and wants to discuss it with you. Your task is to provide helpful, concise, and actionable advice based on their questions. Always refer to the context of their specific plan.
+
+    THEIR PLAN:
+    Title: ${productPlan.productTitle}
+    Description: ${productPlan.description}
+    Price: ${(productPlan.priceCents / 100).toFixed(2)} ${productPlan.currency}
+    `;
+
+    // Map the simple ChatMessage array to the format the API expects
+    const contents: Content[] = history.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.content }],
+    }));
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: contents,
+        config: {
+            systemInstruction: systemInstruction,
+        },
+    });
+
+    return response.text;
 };
 
 
