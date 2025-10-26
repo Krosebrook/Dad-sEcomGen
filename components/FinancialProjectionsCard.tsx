@@ -9,6 +9,8 @@ interface FinancialProjectionsCardProps {
   financials: FinancialProjections;
   onFinancialsChange: (newFinancials: FinancialProjections) => void;
   currency: string;
+  onRegenerate: () => void;
+  isRegenerating: boolean;
 }
 
 const formatCurrency = (cents: number, currency: string = 'USD') => {
@@ -19,17 +21,22 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
   }).format(cents / 100);
 };
 
-const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ financials, onFinancialsChange, currency }) => {
+const ReloadIcon: React.FC<{ className?: string, isSpinning?: boolean }> = ({ className, isSpinning }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} ${isSpinning ? 'animate-spin' : ''}`}>
+        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+        <path d="M21 3v5h-5"/>
+        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+        <path d="M3 21v-5h5"/>
+    </svg>
+);
+
+
+const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ financials, onFinancialsChange, currency, onRegenerate, isRegenerating }) => {
 
   const handleCentsChange = (field: keyof FinancialProjections, value: string) => {
     const floatValue = parseFloat(value);
     const cents = isNaN(floatValue) ? 0 : Math.round(floatValue * 100);
     onFinancialsChange({ ...financials, [field]: cents });
-  };
-
-  const handleNumberChange = (field: keyof FinancialProjections, value: string) => {
-    const intValue = parseInt(value, 10);
-    onFinancialsChange({ ...financials, [field]: isNaN(intValue) ? 0 : intValue });
   };
 
   const calculations = useMemo(() => {
@@ -53,14 +60,15 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
     <Card className="w-full animate-fade-in text-left">
       <CardHeader>
         <CardTitle className="text-2xl md:text-3xl">Financial Projections</CardTitle>
-        <CardDescription>Adjust the numbers to see your potential profit.</CardDescription>
+        <CardDescription>Adjust the assumptions below to project your potential profit.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Input Section */}
           <div className="space-y-6">
-            <div>
+             <div>
               <Label htmlFor="sellingPrice">Selling Price ({currency})</Label>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">This value is based on your Product Blueprint.</p>
               <Input
                 id="sellingPrice"
                 type="number"
@@ -70,41 +78,61 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
                 step="0.01"
               />
             </div>
-            <div>
-              <Label htmlFor="cogs">Cost of Goods Sold (per unit)</Label>
-              <Input
-                id="cogs"
-                type="number"
-                value={financials.costOfGoodsSoldCents / 100}
-                onChange={(e) => handleCentsChange('costOfGoodsSoldCents', e.target.value)}
-                 min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <Label htmlFor="monthlySales">Estimated Monthly Sales</Label>
-               <div className="flex items-center gap-4">
-                <Slider
-                    id="monthlySales"
-                    min={0}
-                    max={500}
-                    step={5}
-                    value={[financials.estimatedMonthlySales]}
-                    onValueChange={(value) => onFinancialsChange({ ...financials, estimatedMonthlySales: value[0] })}
-                />
-                <span className="font-bold text-lg w-16 text-center">{financials.estimatedMonthlySales}</span>
-               </div>
-            </div>
-            <div>
-              <Label htmlFor="marketingBudget">Monthly Marketing Budget</Label>
-              <Input
-                id="marketingBudget"
-                type="number"
-                value={financials.monthlyMarketingBudgetCents / 100}
-                onChange={(e) => handleCentsChange('monthlyMarketingBudgetCents', e.target.value)}
-                 min="0"
-                step="10"
-              />
+
+            {/* AI Assumptions Section */}
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-6">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200">AI-Generated Assumptions</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">These are starting points. Adjust them to fit your strategy.</p>
+                    </div>
+                     <button
+                        onClick={onRegenerate}
+                        disabled={isRegenerating}
+                        className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors disabled:opacity-50"
+                        aria-label="Regenerate financial assumptions"
+                    >
+                        <ReloadIcon isSpinning={isRegenerating} />
+                        Regenerate
+                    </button>
+                </div>
+
+                <div>
+                    <Label htmlFor="cogs">Cost of Goods Sold (per unit)</Label>
+                    <Input
+                        id="cogs"
+                        type="number"
+                        value={financials.costOfGoodsSoldCents / 100}
+                        onChange={(e) => handleCentsChange('costOfGoodsSoldCents', e.target.value)}
+                         min="0"
+                        step="0.01"
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="monthlySales">Estimated Monthly Sales (Units)</Label>
+                    <div className="flex items-center gap-4">
+                        <Slider
+                            id="monthlySales"
+                            min={0}
+                            max={Math.max(500, financials.estimatedMonthlySales * 2)}
+                            step={5}
+                            value={[financials.estimatedMonthlySales]}
+                            onValueChange={(value) => onFinancialsChange({ ...financials, estimatedMonthlySales: value[0] })}
+                        />
+                        <span className="font-bold text-lg w-16 text-center">{financials.estimatedMonthlySales}</span>
+                    </div>
+                </div>
+                <div>
+                    <Label htmlFor="marketingBudget">Monthly Marketing Budget</Label>
+                    <Input
+                        id="marketingBudget"
+                        type="number"
+                        value={financials.monthlyMarketingBudgetCents / 100}
+                        onChange={(e) => handleCentsChange('monthlyMarketingBudgetCents', e.target.value)}
+                        min="0"
+                        step="10"
+                    />
+                </div>
             </div>
           </div>
           {/* Output Section */}

@@ -59,6 +59,7 @@ export interface MarketingKickstart {
 export interface FinancialAssumptions {
     costOfGoodsSoldCents: number;
     monthlyMarketingBudgetCents: number;
+    estimatedMonthlySales: number;
 }
 
 export interface FinancialProjections {
@@ -78,6 +79,19 @@ export interface ChatMessage {
     content: string;
 }
 
+export interface SMARTGoal {
+    title: string;
+    description: string;
+}
+
+export interface SMARTGoals {
+    specific: SMARTGoal;
+    measurable: SMARTGoal;
+    achievable: SMARTGoal;
+    relevant: SMARTGoal;
+    timeBound: SMARTGoal;
+}
+
 export interface SavedVenture {
     id: string;
     name: string;
@@ -85,6 +99,7 @@ export interface SavedVenture {
     data: {
         plan: ProductPlan;
         brandVoice: string;
+        goals: SMARTGoals | null;
         logoImageUrl: string | null;
         analysis: CompetitiveAnalysis | null;
         marketingPlan: MarketingKickstart | null;
@@ -92,4 +107,21 @@ export interface SavedVenture {
         nextSteps: NextStepItem[] | null;
         chatHistory: ChatMessage[] | null;
     }
+}
+
+export interface ProductScoutResult {
+    productName: string;
+    description: string;
+    trendScore: number;
+    salesForecast: string;
+    potentialSuppliers: {
+        platform: string;
+        notes: string;
+    }[];
+    amazonSellingStrategy: {
+        keyServices: string[];
+        shippingRecommendation: string;
+        complianceChecklist: string[];
+    };
+    sources?: GroundingSource[];
 }

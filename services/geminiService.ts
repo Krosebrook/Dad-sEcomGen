@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
-import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage } from '../types';
+import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage, ProductScoutResult, SMARTGoals } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -9,6 +9,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const TEXT_MODEL_NAME = "gemini-2.5-flash";
 const IMAGE_MODEL_NAME = "gemini-2.5-flash-image";
+const ADVANCED_TEXT_MODEL_NAME = "gemini-2.5-pro";
 
 const productPlanSchema = {
     type: Type.OBJECT,
@@ -42,6 +43,37 @@ const productPlanSchema = {
     },
     required: ['productTitle', 'slug', 'description', 'priceCents', 'currency', 'sku', 'stock', 'tags', 'variants']
 };
+
+const smartGoalSchema = {
+    type: Type.OBJECT,
+    properties: {
+        title: { type: Type.STRING, description: 'A concise title for the goal.' },
+        description: { type: Type.STRING, description: 'A detailed description of the goal, explaining how it fits the criterion.' }
+    },
+    required: ['title', 'description']
+};
+
+const smartGoalsSchema = {
+    type: Type.OBJECT,
+    properties: {
+        specific: { ...smartGoalSchema, description: 'A Specific goal for the business.' },
+        measurable: { ...smartGoalSchema, description: 'A Measurable goal for the business.' },
+        achievable: { ...smartGoalSchema, description: 'An Achievable goal for the business.' },
+        relevant: { ...smartGoalSchema, description: 'A Relevant goal for the business.' },
+        timeBound: { ...smartGoalSchema, description: 'A Time-bound goal for the business.' }
+    },
+    required: ['specific', 'measurable', 'achievable', 'relevant', 'timeBound']
+};
+
+const planAndGoalsSchema = {
+    type: Type.OBJECT,
+    properties: {
+        plan: productPlanSchema,
+        goals: smartGoalsSchema
+    },
+    required: ['plan', 'goals']
+};
+
 
 const competitiveAnalysisSchema = {
     type: Type.OBJECT,
@@ -120,8 +152,9 @@ const financialAssumptionsSchema = {
     properties: {
         costOfGoodsSoldCents: { type: Type.INTEGER, description: 'A realistic estimated Cost of Goods Sold (COGS) per unit in cents.' },
         monthlyMarketingBudgetCents: { type: Type.INTEGER, description: 'A reasonable starting monthly marketing budget in cents.' },
+        estimatedMonthlySales: { type: Type.INTEGER, description: 'A realistic estimate for the number of units sold per month in the first 6 months.' },
     },
-    required: ['costOfGoodsSoldCents', 'monthlyMarketingBudgetCents']
+    required: ['costOfGoodsSoldCents', 'monthlyMarketingBudgetCents', 'estimatedMonthlySales']
 };
 
 const nextStepsSchema = {
@@ -136,8 +169,53 @@ const nextStepsSchema = {
     required: ['checklist']
 };
 
-export const generateProductPlan = async (productIdea: string, brandVoice: string, variants?: ProductVariant[]): Promise<ProductPlan> => {
-    const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+const productScoutSchema = {
+    type: Type.ARRAY,
+    description: "A list of 3 to 5 trending product ideas based on the user's category.",
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            productName: { type: Type.STRING, description: "The name of the trending product." },
+            description: { type: Type.STRING, description: "A brief (2-3 sentences) description of the product and why it's trending on Amazon." },
+            trendScore: { type: Type.INTEGER, description: "A score from 1-10 indicating the current trend strength (1=low, 10=high)." },
+            salesForecast: { type: Type.STRING, description: "A short forecast of sales potential (e.g., 'Strong seasonal demand in Q4', 'Steady year-round sales potential')." },
+            potentialSuppliers: {
+                type: Type.ARRAY,
+                description: "A list of 2-3 platforms or types of suppliers for bulk ordering inventory.",
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        platform: { type: Type.STRING, description: "The name of the supplier platform or type (e.g., 'Alibaba', 'ThomasNet', 'Direct from Manufacturer')." },
+                        notes: { type: Type.STRING, description: "Brief notes on sourcing from this platform (e.g., 'Good for low-cost, high-volume orders')." },
+                    },
+                    required: ['platform', 'notes']
+                }
+            },
+            amazonSellingStrategy: {
+                type: Type.OBJECT,
+                description: "Key considerations for selling this product on Amazon.",
+                properties: {
+                    keyServices: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING },
+                        description: "Recommended Amazon services (e.g., 'Fulfillment by Amazon (FBA)', 'Amazon Advertising (PPC)', 'A+ Content')."
+                    },
+                    shippingRecommendation: { type: Type.STRING, description: "A recommendation for shipping, comparing FBA and FBM (Fulfilled by Merchant)." },
+                    complianceChecklist: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING },
+                        description: "A short list of critical Amazon marketplace guidelines or requirements for this product category to avoid rejection."
+                    },
+                },
+                required: ['keyServices', 'shippingRecommendation', 'complianceChecklist']
+            }
+        },
+        required: ['productName', 'description', 'trendScore', 'salesForecast', 'potentialSuppliers', 'amazonSellingStrategy']
+    }
+};
+
+export const generateProductPlan = async (productIdea: string, brandVoice: string, variants?: ProductVariant[]): Promise<{ plan: ProductPlan; goals: SMARTGoals; }> => {
+    const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Alongside the product plan, you MUST ALSO generate a set of SMART (Specific, Measurable, Achievable, Relevant, Time-bound) business goals for the first 6 months of the venture. These goals should be directly related to the product idea. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema containing both the 'plan' and 'goals' keys. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
     
     let userContent = productIdea;
     if (variants && variants.length > 0) {
@@ -150,7 +228,7 @@ export const generateProductPlan = async (productIdea: string, brandVoice: strin
         config: {
             systemInstruction: systemInstruction,
             responseMimeType: "application/json",
-            responseSchema: productPlanSchema,
+            responseSchema: planAndGoalsSchema,
         },
     });
     
@@ -161,7 +239,7 @@ export const generateProductPlan = async (productIdea: string, brandVoice: strin
 
     try {
         const parsedJson = JSON.parse(jsonText);
-        return parsedJson as ProductPlan;
+        return parsedJson as { plan: ProductPlan; goals: SMARTGoals; };
     } catch (e) {
         console.error("Failed to parse Gemini response:", jsonText, e);
         throw new Error("Received invalid JSON from the API.");
@@ -424,4 +502,60 @@ export const generateLogo = async (productTitle: string, style: string, color: s
     }
 
     throw new Error("No image was generated by the API.");
+};
+
+export const scoutTrendingProducts = async (category: string): Promise<ProductScoutResult[]> => {
+    const systemInstruction = `You are a world-class e-commerce trend analyst specializing in the Amazon marketplace. Based on the user's provided category, use real-time Google Search data to identify 3-5 specific, trending products. For each product, provide a comprehensive analysis covering sales forecasting, supplier sourcing, and a detailed Amazon selling strategy, including services, shipping, and compliance. Your response MUST be a single, valid JSON object that conforms to the provided schema, wrapped in a markdown code block ('''json ... '''). Do not include any text, explanation, or markdown formatting before or after the JSON code block.`;
+
+    const response = await ai.models.generateContent({
+        model: ADVANCED_TEXT_MODEL_NAME,
+        contents: `Find trending Amazon products in the category: "${category}". The JSON response should conform to this schema: ${JSON.stringify(productScoutSchema)}`,
+        config: {
+            systemInstruction: systemInstruction,
+            tools: [{googleSearch: {}}],
+        },
+    });
+    
+    const text = response.text;
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+    if (!jsonMatch || !jsonMatch[1]) {
+        console.error("No JSON block found in scout response:", text);
+        try {
+            const parsedJson = JSON.parse(text);
+             const sources: GroundingSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+                ?.map(chunk => ({
+                    uri: chunk.web?.uri || '',
+                    title: chunk.web?.title || 'Untitled Source'
+                }))
+                .filter(source => source.uri) ?? [];
+
+            if (Array.isArray(parsedJson)) {
+                return parsedJson.map(item => ({ ...item, sources }));
+            }
+            return parsedJson as ProductScoutResult[];
+
+        } catch (e) {
+             throw new Error("Could not find a JSON block in the scout API response and the response is not valid JSON.");
+        }
+    }
+    const jsonText = jsonMatch[1];
+    
+    const sources: GroundingSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+        ?.map(chunk => ({
+            uri: chunk.web?.uri || '',
+            title: chunk.web?.title || 'Untitled Source'
+        }))
+        .filter(source => source.uri) ?? [];
+    
+    if (!jsonText) {
+        throw new Error("Received an empty response from the scout API.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText) as ProductScoutResult[];
+        return parsedJson.map(item => ({ ...item, sources }));
+    } catch (e) {
+        console.error("Failed to parse Gemini response for scout:", jsonText, e);
+        throw new Error("Received invalid JSON from the scout API.");
+    }
 };

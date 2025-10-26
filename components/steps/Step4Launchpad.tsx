@@ -59,6 +59,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isRegeneratingFinancials, setIsRegeneratingFinancials] = useState(false);
 
     useEffect(() => {
         if (!marketingPlan && !financials && !nextSteps && productPlan) {
@@ -75,7 +76,6 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                     setFinancials({
                         ...financialResult,
                         sellingPriceCents: productPlan.priceCents,
-                        estimatedMonthlySales: 50,
                     });
                     setNextSteps(nextStepsResult.map(text => ({ text, completed: false })));
                     setChatHistory([]); // Initialize chat history
@@ -93,6 +93,30 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
         }
     }, [marketingPlan, financials, nextSteps, productPlan, chatHistory, setMarketingPlan, setFinancials, setNextSteps, setChatHistory, brandVoice]);
     
+    const handleRegenerateFinancials = useCallback(async () => {
+        if (!productPlan) return;
+        setIsRegeneratingFinancials(true);
+        setError(null);
+        try {
+            const newAssumptions = await generateFinancialAssumptions(productPlan);
+            setFinancials(prev => ({
+                ...(prev || { sellingPriceCents: productPlan.priceCents }),
+                ...newAssumptions
+            }));
+            onPlanModified();
+        } catch (err) {
+            console.error("Failed to regenerate financials", err);
+            setError('Failed to regenerate financial assumptions. Please try again.');
+        } finally {
+            setIsRegeneratingFinancials(false);
+        }
+    }, [productPlan, setFinancials, onPlanModified]);
+
+    const handleFinancialsChange = (newFinancials: FinancialProjections) => {
+        setFinancials(newFinancials);
+        onPlanModified();
+    };
+
     const handleToggleNextStep = useCallback((index: number) => {
         if (nextSteps) {
             const newNextSteps = [...nextSteps];
@@ -172,7 +196,15 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                         />
                     )}
                     {marketingPlan && <MarketingKickstartCard marketingPlan={marketingPlan} />}
-                    {financials && productPlan && <FinancialProjectionsCard financials={financials} onFinancialsChange={setFinancials} currency={productPlan.currency} />}
+                    {financials && productPlan && (
+                        <FinancialProjectionsCard 
+                            financials={financials} 
+                            onFinancialsChange={handleFinancialsChange} 
+                            currency={productPlan.currency} 
+                            onRegenerate={handleRegenerateFinancials}
+                            isRegenerating={isRegeneratingFinancials}
+                        />
+                    )}
                 </>
             )}
             <div className="flex justify-between items-center pt-8">

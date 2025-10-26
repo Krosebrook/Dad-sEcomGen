@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage } from './types';
+import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage, SMARTGoals } from './types';
 import { generateProductPlan } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -9,6 +9,7 @@ import Step2Blueprint from './components/steps/Step2Blueprint';
 import Step3Market from './components/steps/Step3Market';
 import Step4Launchpad from './components/steps/Step4Launchpad';
 import MyVenturesDashboard from './components/MyVenturesDashboard';
+import ProductScout from './components/ProductScout';
 
 
 const App: React.FC = () => {
@@ -25,7 +26,9 @@ const App: React.FC = () => {
   const [ventures, setVentures] = useState<SavedVenture[]>([]);
   const [currentVentureId, setCurrentVentureId] = useState<string | null>(null);
   const [isDashboardVisible, setIsDashboardVisible] = useState<boolean>(false);
+  const [isScoutVisible, setIsScoutVisible] = useState<boolean>(false);
 
+  const [smartGoals, setSmartGoals] = useState<SMARTGoals | null>(null);
   const [analysis, setAnalysis] = useState<CompetitiveAnalysis | null>(null);
   const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
   const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
@@ -63,6 +66,7 @@ const App: React.FC = () => {
   
   const resetAllOutputs = () => {
     setProductPlan(null);
+    setSmartGoals(null);
     setLogoImageUrl(null);
     setAnalysis(null);
     setMarketingPlan(null);
@@ -83,9 +87,10 @@ const App: React.FC = () => {
     resetAllOutputs();
 
     try {
-      const plan = await generateProductPlan(productIdea, brandVoice);
+      const { plan, goals } = await generateProductPlan(productIdea, brandVoice);
       setProductPlan(plan);
-      setCurrentStep(2);
+      setSmartGoals(goals);
+      // We no longer advance the step here; the user will do it from Step1
     } catch (err) {
       console.error(err);
       setError('Failed to generate a product plan. Please check your API key and try again.');
@@ -120,6 +125,7 @@ const App: React.FC = () => {
     const ventureData = { 
         plan: productPlan, 
         brandVoice,
+        goals: smartGoals,
         logoImageUrl,
         analysis,
         marketingPlan,
@@ -152,7 +158,7 @@ const App: React.FC = () => {
     localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
     setIsPlanSaved(true);
 
-  }, [productPlan, brandVoice, logoImageUrl, analysis, marketingPlan, financials, nextSteps, chatHistory, ventures, currentVentureId]);
+  }, [productPlan, brandVoice, smartGoals, logoImageUrl, analysis, marketingPlan, financials, nextSteps, chatHistory, ventures, currentVentureId]);
 
 
   const handleLoadVenture = useCallback((ventureId: string) => {
@@ -163,6 +169,7 @@ const App: React.FC = () => {
       setProductPlan(data.plan);
       setProductIdea(data.plan.productTitle);
       setBrandVoice(data.brandVoice || 'Knowledgeable & Trustworthy Dad');
+      setSmartGoals(data.goals || null);
       setLogoImageUrl(data.logoImageUrl || null);
       setAnalysis(data.analysis || null);
       setMarketingPlan(data.marketingPlan || null);
@@ -202,6 +209,12 @@ const App: React.FC = () => {
 
   const handleExampleClick = (prompt: string) => { setProductIdea(prompt); setInputError(null); };
 
+  const handleSelectScoutedIdea = (idea: string) => {
+    setProductIdea(idea);
+    setInputError(null);
+    setIsScoutVisible(false);
+  };
+
   const steps = ["Idea", "Blueprint", "Market", "Launchpad"];
   
   const renderStepContent = () => {
@@ -217,6 +230,9 @@ const App: React.FC = () => {
             handleExampleClick={handleExampleClick}
             brandVoice={brandVoice}
             setBrandVoice={setBrandVoice}
+            onShowScout={() => setIsScoutVisible(true)}
+            smartGoals={smartGoals}
+            onProceedToBlueprint={() => setCurrentStep(2)}
           />
         );
       case 2:
@@ -282,6 +298,12 @@ const App: React.FC = () => {
           onRename={handleRenameVenture}
           onDelete={handleDeleteVenture}
           onClose={() => setIsDashboardVisible(false)}
+        />
+      )}
+      {isScoutVisible && (
+        <ProductScout
+          onClose={() => setIsScoutVisible(false)}
+          onSelectIdea={handleSelectScoutedIdea}
         />
       )}
       <main className="flex-grow container mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
