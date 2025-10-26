@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage, SMARTGoals, PriceHistoryPoint, SWOTAnalysis, CustomerPersona, BrandIdentityKit, ShopifyIntegration } from './types';
+import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage, SMARTGoals, PriceHistoryPoint, SWOTAnalysis, CustomerPersona, BrandIdentityKit, ShopifyIntegration, ContentStrategy, SupplierQuote } from './types';
 import { generateProductPlan } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -53,10 +53,12 @@ const App: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandIdentityKit | null>(null);
   const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
   const [financials, setFinancials] = useState<FinancialProjections | null>(null);
+  const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuote[]>([]);
   const [nextSteps, setNextSteps] = useState<NextStepItem[] | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[] | null>(null);
   const [storefrontMockupUrl, setStorefrontMockupUrl] = useState<string | null>(null);
   const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
+  const [contentStrategy, setContentStrategy] = useState<ContentStrategy | null>(null);
 
 
   const VENTURES_STORAGE_KEY = 'myVentures';
@@ -97,10 +99,12 @@ const App: React.FC = () => {
     setPersonaAvatarUrl(null);
     setMarketingPlan(null);
     setFinancials(null);
+    setSupplierQuotes([]);
     setNextSteps(null);
     setChatHistory(null);
     setStorefrontMockupUrl(null);
     setShopifyIntegration(null);
+    setContentStrategy(null);
     setCurrentVentureId(null);
     setIsPlanSaved(false);
     setBrandVoice('Knowledgeable & Trustworthy Dad');
@@ -162,10 +166,12 @@ const App: React.FC = () => {
         personaAvatarUrl,
         marketingPlan,
         financials,
+        supplierQuotes,
         nextSteps,
         chatHistory,
         storefrontMockupUrl,
         shopifyIntegration,
+        contentStrategy,
         priceHistory: generateMockPriceHistory(productPlan.priceCents)
     };
 
@@ -193,7 +199,7 @@ const App: React.FC = () => {
     localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
     setIsPlanSaved(true);
 
-  }, [productPlan, brandVoice, smartGoals, logoImageUrl, brandKit, analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan, financials, nextSteps, chatHistory, storefrontMockupUrl, shopifyIntegration, ventures, currentVentureId]);
+  }, [productPlan, brandVoice, smartGoals, logoImageUrl, brandKit, analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan, financials, supplierQuotes, nextSteps, chatHistory, storefrontMockupUrl, shopifyIntegration, contentStrategy, ventures, currentVentureId]);
 
 
   const handleLoadVenture = useCallback((ventureId: string) => {
@@ -213,10 +219,12 @@ const App: React.FC = () => {
       setPersonaAvatarUrl(data.personaAvatarUrl || null);
       setMarketingPlan(data.marketingPlan || null);
       setFinancials(data.financials || null);
+      setSupplierQuotes(data.supplierQuotes || []);
       setNextSteps(data.nextSteps || null);
       setChatHistory(data.chatHistory || null);
       setStorefrontMockupUrl(data.storefrontMockupUrl || null);
       setShopifyIntegration(data.shopifyIntegration || null);
+      setContentStrategy(data.contentStrategy || null);
       setCurrentVentureId(ventureToLoad.id);
       setIsPlanSaved(true);
       setError(null);
@@ -320,6 +328,8 @@ const App: React.FC = () => {
                 setMarketingPlan={setMarketingPlan}
                 financials={financials}
                 setFinancials={setFinancials}
+                supplierQuotes={supplierQuotes}
+                setSupplierQuotes={setSupplierQuotes}
                 nextSteps={nextSteps}
                 setNextSteps={setNextSteps}
                 chatHistory={chatHistory}
@@ -336,6 +346,9 @@ const App: React.FC = () => {
                 setStorefrontMockupUrl={setStorefrontMockupUrl}
                 shopifyIntegration={shopifyIntegration}
                 setShopifyIntegration={setShopifyIntegration}
+                contentStrategy={contentStrategy}
+                setContentStrategy={setContentStrategy}
+                customerPersona={customerPersona}
             />
           );
       default:

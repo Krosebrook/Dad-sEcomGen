@@ -69,6 +69,7 @@ export interface CustomerPersona {
     occupation: string;
     quote: string;
     background: string;
+    demographics: string[];
     motivations: string[];
     goals: string[];
     painPoints: string[];
@@ -93,10 +94,13 @@ export interface MarketingKickstart {
     };
 }
 
+export type FinancialScenario = 'Realistic' | 'Pessimistic' | 'Optimistic';
+
 export interface FinancialAssumptions {
     costOfGoodsSoldCents: number;
     monthlyMarketingBudgetCents: number;
     estimatedMonthlySales: number;
+    scenario: FinancialScenario;
 }
 
 export interface FinancialProjections {
@@ -104,6 +108,7 @@ export interface FinancialProjections {
     costOfGoodsSoldCents: number;
     estimatedMonthlySales: number;
     monthlyMarketingBudgetCents: number;
+    scenario: FinancialScenario;
 }
 
 export interface NextStepItem {
@@ -137,6 +142,30 @@ export interface ShopifyIntegration {
     lastPushedProductId: string | null;
 }
 
+export interface DailyPostIdea {
+    platform: string;
+    idea: string;
+}
+
+export interface WeeklyTheme {
+    week: number;
+    theme: string;
+    dailyPosts: DailyPostIdea[];
+}
+
+export interface ContentStrategy {
+    seoKeywordPack: string[];
+    contentCalendar: WeeklyTheme[];
+    blogPostIdeas: string[];
+}
+
+export interface SupplierQuote {
+    id: string;
+    name: string;
+    pricePerUnitCents: number;
+    moq: number;
+}
+
 export interface SavedVenture {
     id: string;
     name: string;
@@ -153,11 +182,13 @@ export interface SavedVenture {
         personaAvatarUrl: string | null;
         marketingPlan: MarketingKickstart | null;
         financials: FinancialProjections | null;
+        supplierQuotes: SupplierQuote[] | null;
         nextSteps: NextStepItem[] | null;
         chatHistory: ChatMessage[] | null;
         storefrontMockupUrl: string | null;
         priceHistory: PriceHistoryPoint[] | null;
         shopifyIntegration: ShopifyIntegration | null;
+        contentStrategy: ContentStrategy | null;
     }
 }
 

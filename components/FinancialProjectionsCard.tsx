@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { FinancialProjections } from '../types';
+import { FinancialProjections, FinancialScenario } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Input } from './ui/Input';
 import { Label } from './ui/Label';
@@ -9,7 +9,7 @@ interface FinancialProjectionsCardProps {
   financials: FinancialProjections;
   onFinancialsChange: (newFinancials: FinancialProjections) => void;
   currency: string;
-  onRegenerate: () => void;
+  onScenarioChange: (scenario: FinancialScenario) => void;
   isRegenerating: boolean;
 }
 
@@ -21,17 +21,7 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
   }).format(cents / 100);
 };
 
-const ReloadIcon: React.FC<{ className?: string, isSpinning?: boolean }> = ({ className, isSpinning }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} ${isSpinning ? 'animate-spin' : ''}`}>
-        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-        <path d="M21 3v5h-5"/>
-        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-        <path d="M3 21v-5h5"/>
-    </svg>
-);
-
-
-const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ financials, onFinancialsChange, currency, onRegenerate, isRegenerating }) => {
+const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ financials, onFinancialsChange, currency, onScenarioChange, isRegenerating }) => {
 
   const handleCentsChange = (field: keyof FinancialProjections, value: string) => {
     const floatValue = parseFloat(value);
@@ -55,6 +45,8 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
     if (value < 0) return 'text-red-500';
     return 'text-slate-800 dark:text-slate-200';
   }
+
+  const scenarios: FinancialScenario[] = ['Pessimistic', 'Realistic', 'Optimistic'];
 
   return (
     <Card className="w-full animate-fade-in text-left">
@@ -81,20 +73,34 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
 
             {/* AI Assumptions Section */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-6">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200">AI-Generated Assumptions</h4>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">These are starting points. Adjust them to fit your strategy.</p>
+                <div>
+                    <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200">Financial Scenario</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Select a scenario to regenerate AI assumptions based on different market conditions.</p>
+                    <div className="flex flex-wrap justify-start gap-2">
+                         {scenarios.map((scenario) => (
+                            <button
+                                key={scenario}
+                                type="button"
+                                onClick={() => onScenarioChange(scenario)}
+                                disabled={isRegenerating}
+                                className={`px-3 py-1.5 text-sm rounded-full transition-colors font-semibold flex items-center justify-center ${
+                                    financials.scenario === scenario
+                                    ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900 ring-2 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900 ring-slate-900 dark:ring-slate-50'
+                                    : 'bg-white hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200'
+                                }`}
+                                >
+                                {isRegenerating && financials.scenario === scenario && (
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                )}
+                                {scenario}
+                            </button>
+                        ))}
                     </div>
-                     <button
-                        onClick={onRegenerate}
-                        disabled={isRegenerating}
-                        className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors disabled:opacity-50"
-                        aria-label="Regenerate financial assumptions"
-                    >
-                        <ReloadIcon isSpinning={isRegenerating} />
-                        Regenerate
-                    </button>
+                </div>
+
+                 <div>
+                    <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200">AI-Generated Assumptions</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">These are starting points. Adjust them to fit your strategy.</p>
                 </div>
 
                 <div>

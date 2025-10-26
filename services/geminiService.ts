@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
-import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage, ProductScoutResult, SMARTGoals, SWOTAnalysis, CustomerPersona, BrandIdentityKit } from '../types';
+import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage, ProductScoutResult, SMARTGoals, SWOTAnalysis, CustomerPersona, BrandIdentityKit, ContentStrategy, FinancialScenario } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -163,12 +163,13 @@ const customerPersonaSchema = {
         occupation: { type: Type.STRING, description: "The persona's job title or occupation." },
         quote: { type: Type.STRING, description: "A short, memorable quote that encapsulates the persona's mindset." },
         background: { type: Type.STRING, description: "A 2-3 sentence background story for the persona." },
+        demographics: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 key demographic points (e.g., 'Location: Urban', 'Income: $75k+', 'Family: Married with 2 kids')." },
         motivations: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 key motivations or drivers for the persona." },
         goals: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 goals the persona is trying to achieve, relevant to the product." },
         painPoints: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 frustrations or 'pain points' the persona experiences that the product can solve." },
         avatarPrompt: { type: Type.STRING, description: "A detailed prompt for an image generation model to create a photorealistic headshot of this persona. Describe their appearance, expression, and background setting. Example: 'Photorealistic headshot of a friendly 42-year-old male architect with short brown hair and glasses, smiling in a well-lit, modern office setting.'" }
     },
-    required: ['name', 'age', 'occupation', 'quote', 'background', 'motivations', 'goals', 'painPoints', 'avatarPrompt']
+    required: ['name', 'age', 'occupation', 'quote', 'background', 'demographics', 'motivations', 'goals', 'painPoints', 'avatarPrompt']
 };
 
 
@@ -221,8 +222,9 @@ const financialAssumptionsSchema = {
         costOfGoodsSoldCents: { type: Type.INTEGER, description: 'A realistic estimated Cost of Goods Sold (COGS) per unit in cents.' },
         monthlyMarketingBudgetCents: { type: Type.INTEGER, description: 'A reasonable starting monthly marketing budget in cents.' },
         estimatedMonthlySales: { type: Type.INTEGER, description: 'A realistic estimate for the number of units sold per month in the first 6 months.' },
+        scenario: { type: Type.STRING, enum: ['Realistic', 'Pessimistic', 'Optimistic'], description: "The financial scenario this data represents." }
     },
-    required: ['costOfGoodsSoldCents', 'monthlyMarketingBudgetCents', 'estimatedMonthlySales']
+    required: ['costOfGoodsSoldCents', 'monthlyMarketingBudgetCents', 'estimatedMonthlySales', 'scenario']
 };
 
 const nextStepsSchema = {
@@ -280,6 +282,47 @@ const productScoutSchema = {
         },
         required: ['productName', 'description', 'trendScore', 'salesForecast', 'potentialSuppliers', 'amazonSellingStrategy']
     }
+};
+
+const contentStrategySchema = {
+    type: Type.OBJECT,
+    properties: {
+        seoKeywordPack: {
+            type: Type.ARRAY,
+            description: "A list of 15-20 primary and long-tail SEO keywords relevant to the product.",
+            items: { type: Type.STRING }
+        },
+        contentCalendar: {
+            type: Type.ARRAY,
+            description: "A 4-week content calendar with a theme for each week and daily post ideas for social media.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    week: { type: Type.INTEGER },
+                    theme: { type: Type.STRING, description: "The overarching theme for the week's content." },
+                    dailyPosts: {
+                        type: Type.ARRAY,
+                        description: "A list of 5-7 daily post ideas for the week.",
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                platform: { type: Type.STRING, enum: ['Instagram', 'Facebook', 'X', 'Blog'], description: "The suggested platform for the post." },
+                                idea: { type: Type.STRING, description: "A concise idea for the daily content." }
+                            },
+                            required: ['platform', 'idea']
+                        }
+                    }
+                },
+                required: ['week', 'theme', 'dailyPosts']
+            }
+        },
+        blogPostIdeas: {
+            type: Type.ARRAY,
+            description: "A list of 2-3 engaging blog post titles based on the SEO keywords and target audience.",
+            items: { type: Type.STRING }
+        }
+    },
+    required: ['seoKeywordPack', 'contentCalendar', 'blogPostIdeas']
 };
 
 export const generateProductPlan = async (productIdea: string, brandVoice: string, variants?: ProductVariant[]): Promise<{ plan: ProductPlan; goals: SMARTGoals; }> => {
@@ -530,10 +573,18 @@ export const generateMarketingKickstart = async (productPlan: ProductPlan, brand
     }
 };
 
-export const generateFinancialAssumptions = async (productPlan: ProductPlan): Promise<FinancialAssumptions> => {
-    const systemInstruction = `You are a financial analyst for e-commerce businesses. Based on the provided product plan, generate realistic financial assumptions for a starting business. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+export const generateFinancialAssumptions = async (productPlan: ProductPlan, scenario: FinancialScenario): Promise<FinancialAssumptions> => {
+    let systemInstruction = `You are a financial analyst for e-commerce businesses. Based on the provided product plan, generate financial assumptions for a starting business. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+
+    if (scenario === 'Pessimistic') {
+        systemInstruction += ` The user has selected a 'Pessimistic' scenario. You MUST provide more conservative estimates: assume a higher Cost of Goods Sold, lower monthly sales, and perhaps a less efficient marketing budget.`;
+    } else if (scenario === 'Optimistic') {
+        systemInstruction += ` The user has selected an 'Optimistic' scenario. You MUST provide more aggressive estimates: assume a lower Cost of Goods Sold (e.g., due to better supplier negotiation), higher monthly sales, and a more efficient marketing budget.`;
+    } else {
+        systemInstruction += ` The user has selected a 'Realistic' scenario. You MUST provide balanced and achievable estimates.`;
+    }
     
-    const userContent = `Generate financial assumptions for the following product:\n
+    const userContent = `Generate financial assumptions for the following product under a '${scenario}' scenario:\n
     Product Title: ${productPlan.productTitle}\n
     Description: ${productPlan.description}\n
     Price: ${productPlan.priceCents / 100} ${productPlan.currency}`;
@@ -555,6 +606,8 @@ export const generateFinancialAssumptions = async (productPlan: ProductPlan): Pr
 
     try {
         const parsedJson = JSON.parse(jsonText);
+        // Ensure the returned scenario matches the requested one
+        parsedJson.scenario = scenario;
         return parsedJson as FinancialAssumptions;
     } catch (e) {
         console.error("Failed to parse Gemini response for financial assumptions:", jsonText, e);
@@ -779,4 +832,58 @@ export const generateStorefrontMockup = async (productPlan: ProductPlan, brandKi
     }
 
     throw new Error("No storefront mockup image was generated by the API.");
+};
+
+export const generateContentStrategy = async (productPlan: ProductPlan, customerPersona: CustomerPersona, brandVoice: string): Promise<ContentStrategy> => {
+    const systemInstruction = `You are a senior content marketer and SEO specialist for e-commerce brands. Based on the provided product plan and customer persona, generate a comprehensive "Content Strategy Hub". This includes a relevant SEO keyword pack, a 4-week content calendar, and compelling blog post ideas. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+
+    const userContent = `Generate a Content Strategy for the following product and persona:\n
+    Product Title: ${productPlan.productTitle}\n
+    Description: ${productPlan.description}\n
+    Target Audience: ${productPlan.description.match(/Target Audience:\s*([\s\S]+)/i)?.[1].trim()}\n
+    Customer Persona Name: ${customerPersona.name}, Age: ${customerPersona.age}\n
+    Persona Goals: ${customerPersona.goals.join(', ')}\n
+    Persona Pain Points: ${customerPersona.painPoints.join(', ')}`;
+
+    const response = await ai.models.generateContent({
+        model: ADVANCED_TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: contentStrategySchema,
+        },
+    });
+
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API for content strategy.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as ContentStrategy;
+    } catch (e) {
+        console.error("Failed to parse Gemini response for content strategy:", jsonText, e);
+        throw new Error("Received invalid JSON from the API for content strategy.");
+    }
+};
+
+export const generateBlogPost = async (blogTitle: string, productPlan: ProductPlan, brandVoice: string): Promise<string> => {
+    const systemInstruction = `You are an expert content writer and SEO specialist. Your task is to write a complete, engaging, and SEO-friendly blog post based on the provided title and product context. The blog post should be well-structured with headings (using markdown #), paragraphs, and a call-to-action at the end that subtly promotes the product. Your writing style should embody the following brand voice: '${brandVoice}'. The response should be only the markdown text of the blog post.`;
+    
+    const userContent = `Write a blog post with the title: "${blogTitle}"\n
+    The blog post is for a brand selling this product:\n
+    Product Title: ${productPlan.productTitle}\n
+    Product Description: ${productPlan.description}`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+        },
+    });
+
+    return response.text;
 };

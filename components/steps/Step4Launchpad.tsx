@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage, CompetitiveAnalysis, BrandIdentityKit, ShopifyIntegration } from '../../types';
+import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage, CompetitiveAnalysis, BrandIdentityKit, ShopifyIntegration, ContentStrategy, CustomerPersona, FinancialScenario, SupplierQuote } from '../../types';
 import { generateMarketingKickstart, generateFinancialAssumptions, generateNextSteps, generateStorefrontMockup } from '../../services/geminiService';
 import MarketingKickstartCard from '../MarketingKickstartCard';
 import FinancialProjectionsCard from '../FinancialProjectionsCard';
@@ -7,6 +7,8 @@ import NextStepsCard from '../NextStepsCard';
 import ChatCard from '../ChatCard';
 import StorefrontMockupCard from '../StorefrontMockupCard';
 import ShopifyIntegrationCard from '../ShopifyIntegrationCard';
+import ContentStrategyCard from '../ContentStrategyCard';
+import SupplierTrackerCard from '../SupplierTrackerCard';
 import { Button } from '../ui/Button';
 import ExportControls from '../ExportControls';
 
@@ -17,6 +19,8 @@ interface Step4LaunchpadProps {
     setMarketingPlan: React.Dispatch<React.SetStateAction<MarketingKickstart | null>>;
     financials: FinancialProjections | null;
     setFinancials: React.Dispatch<React.SetStateAction<FinancialProjections | null>>;
+    supplierQuotes: SupplierQuote[];
+    setSupplierQuotes: React.Dispatch<React.SetStateAction<SupplierQuote[]>>;
     nextSteps: NextStepItem[] | null;
     setNextSteps: React.Dispatch<React.SetStateAction<NextStepItem[] | null>>;
     chatHistory: ChatMessage[] | null;
@@ -33,6 +37,9 @@ interface Step4LaunchpadProps {
     setStorefrontMockupUrl: React.Dispatch<React.SetStateAction<string | null>>;
     shopifyIntegration: ShopifyIntegration | null;
     setShopifyIntegration: React.Dispatch<React.SetStateAction<ShopifyIntegration | null>>;
+    contentStrategy: ContentStrategy | null;
+    setContentStrategy: React.Dispatch<React.SetStateAction<ContentStrategy | null>>;
+    customerPersona: CustomerPersona | null;
 }
 
 const LoadingSpinner = ({ message }: { message: string }) => (
@@ -52,6 +59,8 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
     setMarketingPlan,
     financials,
     setFinancials,
+    supplierQuotes,
+    setSupplierQuotes,
     nextSteps,
     setNextSteps,
     chatHistory,
@@ -68,6 +77,9 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
     setStorefrontMockupUrl,
     shopifyIntegration,
     setShopifyIntegration,
+    contentStrategy,
+    setContentStrategy,
+    customerPersona,
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -83,7 +95,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                 try {
                     const [marketingResult, financialResult, nextStepsResult] = await Promise.all([
                         generateMarketingKickstart(productPlan, brandVoice),
-                        generateFinancialAssumptions(productPlan),
+                        generateFinancialAssumptions(productPlan, 'Realistic'),
                         generateNextSteps(productPlan, brandVoice)
                     ]);
                     setMarketingPlan(marketingResult);
@@ -91,6 +103,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                         ...financialResult,
                         sellingPriceCents: productPlan.priceCents,
                     });
+                    setSupplierQuotes([]);
                     setNextSteps(nextStepsResult.map(text => ({ text, completed: false })));
                     setChatHistory([]); // Initialize chat history
                 } catch (err) {
@@ -101,22 +114,22 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                 }
             };
             fetchLaunchpadAssets();
-        } else if (chatHistory === null) {
-            // Ensure chat history is initialized for already loaded plans
-            setChatHistory([]);
+        } else {
+             if (chatHistory === null) setChatHistory([]);
+             if (supplierQuotes === null) setSupplierQuotes([]);
         }
-    }, [marketingPlan, financials, nextSteps, productPlan, chatHistory, setMarketingPlan, setFinancials, setNextSteps, setChatHistory, brandVoice]);
+    }, [marketingPlan, financials, nextSteps, productPlan, chatHistory, supplierQuotes, setMarketingPlan, setFinancials, setSupplierQuotes, setNextSteps, setChatHistory, brandVoice]);
     
-    const handleRegenerateFinancials = useCallback(async () => {
+    const handleFinancialScenarioChange = useCallback(async (scenario: FinancialScenario) => {
         if (!productPlan) return;
         setIsRegeneratingFinancials(true);
         setError(null);
         try {
-            const newAssumptions = await generateFinancialAssumptions(productPlan);
-            setFinancials(prev => ({
-                ...(prev || { sellingPriceCents: productPlan.priceCents, estimatedMonthlySales: 50, costOfGoodsSoldCents: 0, monthlyMarketingBudgetCents: 0 }),
+            const newAssumptions = await generateFinancialAssumptions(productPlan, scenario);
+            setFinancials({
+                sellingPriceCents: productPlan.priceCents,
                 ...newAssumptions
-            }));
+            });
             onPlanModified();
         } catch (err) {
             console.error("Failed to regenerate financials", err);
@@ -144,6 +157,11 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
 
     const handleFinancialsChange = (newFinancials: FinancialProjections) => {
         setFinancials(newFinancials);
+        onPlanModified();
+    };
+
+    const handleSupplierQuotesChange = (newQuotes: SupplierQuote[]) => {
+        setSupplierQuotes(newQuotes);
         onPlanModified();
     };
 
@@ -223,6 +241,32 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                             mockupUrl={storefrontMockupUrl}
                         />
                     )}
+                    {marketingPlan && customerPersona && (
+                        <ContentStrategyCard
+                            productPlan={productPlan}
+                            customerPersona={customerPersona}
+                            brandVoice={brandVoice}
+                            contentStrategy={contentStrategy}
+                            setContentStrategy={setContentStrategy}
+                            onPlanModified={onPlanModified}
+                        />
+                    )}
+                     {financials && productPlan && (
+                        <FinancialProjectionsCard 
+                            financials={financials} 
+                            onFinancialsChange={handleFinancialsChange} 
+                            currency={productPlan.currency} 
+                            onScenarioChange={handleFinancialScenarioChange}
+                            isRegenerating={isRegeneratingFinancials}
+                        />
+                    )}
+                    {productPlan && (
+                        <SupplierTrackerCard 
+                            quotes={supplierQuotes} 
+                            onQuotesChange={handleSupplierQuotesChange}
+                            currency={productPlan.currency}
+                        />
+                    )}
                     {chatHistory && productPlan && (
                         <ChatCard 
                             productPlan={productPlan}
@@ -241,15 +285,6 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                         />
                     )}
                     {marketingPlan && <MarketingKickstartCard marketingPlan={marketingPlan} />}
-                    {financials && productPlan && (
-                        <FinancialProjectionsCard 
-                            financials={financials} 
-                            onFinancialsChange={handleFinancialsChange} 
-                            currency={productPlan.currency} 
-                            onRegenerate={handleRegenerateFinancials}
-                            isRegenerating={isRegeneratingFinancials}
-                        />
-                    )}
                 </>
             )}
             <div className="flex justify-between items-center pt-8">
