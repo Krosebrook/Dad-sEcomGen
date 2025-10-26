@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection, MarketingKickstart } from '../types';
+import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -43,17 +43,34 @@ const productPlanSchema = {
     required: ['productTitle', 'slug', 'description', 'priceCents', 'currency', 'sku', 'stock', 'tags', 'variants']
 };
 
-const scorecardSchema = {
+const competitiveAnalysisSchema = {
     type: Type.OBJECT,
     properties: {
-        estimatedMonthlySales: { type: Type.STRING, description: 'Estimated monthly sales units for the product on Amazon. Can be a range (e.g., "500-700").' },
-        averageBSR: { type: Type.STRING, description: 'Average Best Sellers Rank in its main category. Can be a range or approximate value (e.g., "15,000-20,000").' },
-        competingFBASellers: { type: Type.INTEGER, description: 'The number of other active FBA sellers on the primary listing.' },
-        salesVelocity: { type: Type.STRING, description: 'An assessment of sales velocity (e.g., "High", "Medium", "Low").' },
-        opportunitySummary: { type: Type.STRING, description: 'A brief, 2-3 sentence summary of the product opportunity, including potential risks or advantages.' }
+        opportunityScore: { type: Type.INTEGER, description: 'A score from 1-10 indicating the market opportunity (1=low, 10=high).' },
+        marketSummary: { type: Type.STRING, description: 'A 2-3 sentence summary of the market landscape, target audience, and potential.' },
+        competitors: {
+            type: Type.ARRAY,
+            description: 'A list of 3-5 potential real-world competitors.',
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "The competitor's brand or product name." },
+                    strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'A list of their key strengths.' },
+                    weaknesses: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'A list of their key weaknesses.' },
+                    estimatedPriceRange: { type: Type.STRING, description: 'Their typical price range (e.g., "$50-$75").' }
+                },
+                required: ['name', 'strengths', 'weaknesses', 'estimatedPriceRange']
+            }
+        },
+        differentiationStrategies: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'A list of actionable strategies to differentiate this product from the competition.'
+        }
     },
-    required: ['estimatedMonthlySales', 'averageBSR', 'competingFBASellers', 'salesVelocity', 'opportunitySummary']
+    required: ['opportunityScore', 'marketSummary', 'competitors', 'differentiationStrategies']
 };
+
 
 const marketingKickstartSchema = {
     type: Type.OBJECT,
@@ -98,6 +115,14 @@ const marketingKickstartSchema = {
     required: ['socialMediaPosts', 'adCopy', 'launchEmail']
 };
 
+const financialAssumptionsSchema = {
+    type: Type.OBJECT,
+    properties: {
+        costOfGoodsSoldCents: { type: Type.INTEGER, description: 'A realistic estimated Cost of Goods Sold (COGS) per unit in cents.' },
+        monthlyMarketingBudgetCents: { type: Type.INTEGER, description: 'A reasonable starting monthly marketing budget in cents.' },
+    },
+    required: ['costOfGoodsSoldCents', 'monthlyMarketingBudgetCents']
+};
 
 export const generateProductPlan = async (productIdea: string, variants?: ProductVariant[]): Promise<ProductPlan> => {
     const systemInstruction = `You are an expert e-commerce business consultant. A user wants to start a new online store. Based on their input, generate a comprehensive and realistic product plan. The product should be something a dad might be interested in selling or buying. For the 'description' field, ensure it is detailed and well-structured. It must include a main product description (2-3 paragraphs), a section for "Unique Selling Propositions (USPs)", and a section for "Target Audience". If specific variants are provided by the user, you MUST use their exact price and stock levels, and ensure the rest of the plan is consistent with these details. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
@@ -182,27 +207,53 @@ export const regeneratePlanSection = async (
 };
 
 
-export const generateScorecard = async (productIdea: string): Promise<ProductScorecard> => {
-    const systemInstruction = `You are an Amazon FBA wholesale expert. Your task is to analyze a product idea and provide a "Product Opportunity Scorecard" with key metrics. Focus on data relevant to a seller sourcing from wholesalers. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+export const generateCompetitiveAnalysis = async (productIdea: string): Promise<CompetitiveAnalysis> => {
+    const systemInstruction = `You are an expert market research analyst specializing in e-commerce. A user has a product idea. Your task is to perform a competitive analysis using real-time Google Search data. Provide a concise, actionable "Competitive Intelligence" report. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
 
     const response = await ai.models.generateContent({
         model: TEXT_MODEL_NAME,
-        contents: `Analyze this product for Amazon FBA wholesale: ${productIdea}`,
+        contents: `Provide a competitive intelligence report for this product idea: ${productIdea}`,
         config: {
             systemInstruction: systemInstruction,
-            responseMimeType: "application/json",
-            responseSchema: scorecardSchema,
+            tools: [{googleSearch: {}}],
         },
     });
     
-    const jsonText = response.text.trim();
+    // The model is not configured to return JSON with search grounding, so we must parse the markdown
+    const text = response.text;
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+    if (!jsonMatch || !jsonMatch[1]) {
+        console.error("No JSON block found in response:", text);
+        // Fallback: try to parse the whole text as JSON
+        try {
+            const parsedJson = JSON.parse(text);
+            const sources: GroundingSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+                ?.map(chunk => ({
+                    uri: chunk.web?.uri || '',
+                    title: chunk.web?.title || 'Untitled Source'
+                }))
+                .filter(source => source.uri) ?? [];
+            return { ...parsedJson, sources } as CompetitiveAnalysis;
+        } catch (e) {
+             throw new Error("Could not find a JSON block in the API response and the response is not valid JSON.");
+        }
+    }
+    const jsonText = jsonMatch[1];
+    
+    const sources: GroundingSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+        ?.map(chunk => ({
+            uri: chunk.web?.uri || '',
+            title: chunk.web?.title || 'Untitled Source'
+        }))
+        .filter(source => source.uri) ?? [];
+    
     if (!jsonText) {
         throw new Error("Received an empty response from the API.");
     }
 
     try {
         const parsedJson = JSON.parse(jsonText);
-        return parsedJson as ProductScorecard;
+        return { ...parsedJson, sources } as CompetitiveAnalysis;
     } catch (e) {
         console.error("Failed to parse Gemini response:", jsonText, e);
         throw new Error("Received invalid JSON from the API.");
@@ -237,6 +288,38 @@ export const generateMarketingKickstart = async (productPlan: ProductPlan): Prom
         return parsedJson as MarketingKickstart;
     } catch (e) {
         console.error("Failed to parse Gemini response for marketing plan:", jsonText, e);
+        throw new Error("Received invalid JSON from the API.");
+    }
+};
+
+export const generateFinancialAssumptions = async (productPlan: ProductPlan): Promise<FinancialAssumptions> => {
+    const systemInstruction = `You are a financial analyst for e-commerce businesses. Based on the provided product plan, generate realistic financial assumptions for a starting business. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+    
+    const userContent = `Generate financial assumptions for the following product:\n
+    Product Title: ${productPlan.productTitle}\n
+    Description: ${productPlan.description}\n
+    Price: ${productPlan.priceCents / 100} ${productPlan.currency}`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: financialAssumptionsSchema,
+        },
+    });
+    
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as FinancialAssumptions;
+    } catch (e) {
+        console.error("Failed to parse Gemini response for financial assumptions:", jsonText, e);
         throw new Error("Received invalid JSON from the API.");
     }
 };

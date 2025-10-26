@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, ProductVariant, ProductScorecard, RegenerateableSection, MarketingKickstart } from './types';
-import { generateProductPlan, generateLogo, generateScorecard, regeneratePlanSection, generateMarketingKickstart } from './services/geminiService';
+import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, FinancialProjections } from './types';
+import { generateProductPlan, generateLogo, generateCompetitiveAnalysis, regeneratePlanSection, generateMarketingKickstart, generateFinancialAssumptions } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductPlanCard from './components/ProductPlanCard';
-import ProductScorecardCard from './components/ProductScorecardCard';
+import CompetitiveAnalysisCard from './components/CompetitiveAnalysisCard';
 import MarketingKickstartCard from './components/MarketingKickstartCard';
+import FinancialProjectionsCard from './components/FinancialProjectionsCard';
 import { Input } from './components/ui/Input';
 import { Button } from './components/ui/Button';
 
@@ -18,10 +19,10 @@ const App: React.FC = () => {
   const [savedPlanExists, setSavedPlanExists] = useState<boolean>(false);
   const [inputError, setInputError] = useState<string | null>(null);
 
-  // State for scorecard generation
-  const [scorecard, setScorecard] = useState<ProductScorecard | null>(null);
-  const [isGeneratingScorecard, setIsGeneratingScorecard] = useState<boolean>(false);
-  const [scorecardError, setScorecardError] = useState<string | null>(null);
+  // State for competitive analysis
+  const [analysis, setAnalysis] = useState<CompetitiveAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // State for logo generation
   const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
@@ -41,6 +42,11 @@ const App: React.FC = () => {
   const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
   const [isGeneratingMarketing, setIsGeneratingMarketing] = useState<boolean>(false);
   const [marketingError, setMarketingError] = useState<string | null>(null);
+
+  // State for Financial Projections
+  const [financials, setFinancials] = useState<FinancialProjections | null>(null);
+  const [isGeneratingFinancials, setIsGeneratingFinancials] = useState<boolean>(false);
+  const [financialsError, setFinancialsError] = useState<string | null>(null);
 
 
   const LOCAL_STORAGE_KEY = 'ecommerceProductPlan';
@@ -62,6 +68,18 @@ const App: React.FC = () => {
       setInputError('Only letters, numbers, and spaces are allowed.');
     }
   };
+  
+  const resetAllOutputs = () => {
+    setProductPlan(null);
+    setLogoImageUrl(null);
+    setLogoError(null);
+    setAnalysis(null);
+    setAnalysisError(null);
+    setMarketingPlan(null);
+    setMarketingError(null);
+    setFinancials(null);
+    setFinancialsError(null);
+  };
 
   const handleGeneratePlan = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,13 +87,7 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    setProductPlan(null);
-    setLogoImageUrl(null);
-    setLogoError(null);
-    setScorecard(null);
-    setScorecardError(null);
-    setMarketingPlan(null);
-    setMarketingError(null);
+    resetAllOutputs();
 
 
     try {
@@ -90,23 +102,23 @@ const App: React.FC = () => {
     }
   }, [productIdea, isLoading, inputError]);
 
-  const handleGenerateScorecard = useCallback(async () => {
-    if (!productIdea.trim() || isLoading || isGeneratingScorecard) return;
+  const handleAnalyzeOpportunity = useCallback(async () => {
+    if (!productIdea.trim() || isLoading || isAnalyzing) return;
 
-    setIsGeneratingScorecard(true);
-    setScorecardError(null);
-    setScorecard(null);
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysis(null);
 
     try {
-        const result = await generateScorecard(productIdea);
-        setScorecard(result);
+        const result = await generateCompetitiveAnalysis(productIdea);
+        setAnalysis(result);
     } catch (err) {
         console.error(err);
-        setScorecardError('Failed to generate scorecard. Please try again.');
+        setAnalysisError('Failed to generate competitive analysis. Please try again.');
     } finally {
-        setIsGeneratingScorecard(false);
+        setIsAnalyzing(false);
     }
-  }, [productIdea, isLoading, isGeneratingScorecard]);
+  }, [productIdea, isLoading, isAnalyzing]);
 
   const handleUpdatePlan = useCallback(async (updatedVariants: ProductVariant[]) => {
     if (!productIdea.trim() || isLoading) return;
@@ -179,9 +191,10 @@ const App: React.FC = () => {
       setProductPlan(data.plan);
       setLogoImageUrl(data.logoImageUrl || null);
       setIsPlanSaved(true);
-      setScorecard(null);
+      setAnalysis(null);
       setError(null);
       setMarketingPlan(null);
+      setFinancials(null);
     }
   }, []);
 
@@ -219,6 +232,28 @@ const App: React.FC = () => {
     }
   }, [productPlan, isGeneratingMarketing]);
 
+  const handleGenerateFinancials = useCallback(async () => {
+    if (!productPlan || isGeneratingFinancials) return;
+
+    setIsGeneratingFinancials(true);
+    setFinancialsError(null);
+    setFinancials(null);
+
+    try {
+        const assumptions = await generateFinancialAssumptions(productPlan);
+        setFinancials({
+          ...assumptions,
+          sellingPriceCents: productPlan.priceCents,
+          estimatedMonthlySales: 50, // Default starting value
+        });
+    } catch (err) {
+        console.error(err);
+        setFinancialsError('Failed to generate financial assumptions. Please try again.');
+    } finally {
+        setIsGeneratingFinancials(false);
+    }
+  }, [productPlan, isGeneratingFinancials]);
+
   const examplePrompts = [
     "Handmade leather wallets",
     "Smart gadgets for the garage",
@@ -231,7 +266,7 @@ const App: React.FC = () => {
     setInputError(null);
   };
 
-  const anyLoading = isLoading || isGeneratingScorecard || isGeneratingMarketing;
+  const anyLoading = isLoading || isAnalyzing || isGeneratingMarketing || isGeneratingFinancials;
 
   return (
     <div className="min-h-screen flex flex-col text-slate-800 dark:text-slate-200">
@@ -287,8 +322,8 @@ const App: React.FC = () => {
                   'Generate Product Plan'
                 )}
               </Button>
-              <Button type="button" onClick={handleGenerateScorecard} disabled={anyLoading || !productIdea.trim() || !!inputError} variant="outline" className="w-full sm:w-auto">
-                {isGeneratingScorecard ? (
+              <Button type="button" onClick={handleAnalyzeOpportunity} disabled={anyLoading || !productIdea.trim() || !!inputError} variant="outline" className="w-full sm:w-auto">
+                {isAnalyzing ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -310,21 +345,21 @@ const App: React.FC = () => {
         </div>
 
         <div className="w-full max-w-4xl mt-12 space-y-8">
-          {scorecardError && (
+          {analysisError && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
-              <p>{scorecardError}</p>
+              <p>{analysisError}</p>
             </div>
           )}
-          {isGeneratingScorecard && (
+          {isAnalyzing && (
              <div className="flex justify-center items-center flex-col gap-4 p-8 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
                 <svg className="animate-spin h-8 w-8 text-slate-600 dark:text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p className="text-slate-600 dark:text-slate-400">Analyzing product opportunity...</p>
+                <p className="text-slate-600 dark:text-slate-400">Analyzing market opportunity with Google Search...</p>
             </div>
           )}
-          {scorecard && <ProductScorecardCard scorecard={scorecard} />}
+          {analysis && <CompetitiveAnalysisCard analysis={analysis} />}
 
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
@@ -358,11 +393,18 @@ const App: React.FC = () => {
           )}
            {productPlan && (
             <div className="w-full max-w-4xl text-center">
-              {!marketingPlan && !isGeneratingMarketing && (
-                <Button onClick={handleGenerateMarketing} disabled={anyLoading}>
-                  Generate Marketing Kickstart
-                </Button>
-              )}
+              <div className="flex justify-center flex-wrap gap-4">
+                {!marketingPlan && !isGeneratingMarketing && (
+                  <Button onClick={handleGenerateMarketing} disabled={anyLoading}>
+                    Generate Marketing Kickstart
+                  </Button>
+                )}
+                {!financials && !isGeneratingFinancials && (
+                   <Button onClick={handleGenerateFinancials} disabled={anyLoading}>
+                    Calculate Financials
+                  </Button>
+                )}
+              </div>
               {marketingError && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center mt-4" role="alert">
                   <p>{marketingError}</p>
@@ -377,7 +419,24 @@ const App: React.FC = () => {
                   <p className="text-slate-600 dark:text-slate-400">Generating marketing assets...</p>
                 </div>
               )}
+               {financialsError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center mt-4" role="alert">
+                  <p>{financialsError}</p>
+                </div>
+              )}
+              {isGeneratingFinancials && (
+                <div className="flex justify-center items-center flex-col gap-4 p-8 bg-slate-100 dark:bg-slate-800/50 rounded-lg mt-8">
+                  <svg className="animate-spin h-8 w-8 text-slate-600 dark:text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-slate-600 dark:text-slate-400">Generating financial assumptions...</p>
+                </div>
+              )}
+              
               {marketingPlan && <div className="mt-8"><MarketingKickstartCard marketingPlan={marketingPlan} /></div>}
+              {financials && <div className="mt-8"><FinancialProjectionsCard financials={financials} onFinancialsChange={setFinancials} currency={productPlan.currency}/></div>}
+
             </div>
           )}
         </div>

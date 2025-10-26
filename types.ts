@@ -17,12 +17,24 @@ export interface ProductPlan {
   variants: ProductVariant[];
 }
 
-export interface ProductScorecard {
-  estimatedMonthlySales: string;
-  averageBSR: string;
-  competingFBASellers: number;
-  salesVelocity: string;
-  opportunitySummary: string;
+export interface GroundingSource {
+  uri: string;
+  title: string;
+}
+
+export interface CompetitorProfile {
+  name: string;
+  strengths: string[];
+  weaknesses: string[];
+  estimatedPriceRange: string;
+}
+
+export interface CompetitiveAnalysis {
+  opportunityScore: number;
+  marketSummary: string;
+  competitors: CompetitorProfile[];
+  differentiationStrategies: string[];
+  sources: GroundingSource[];
 }
 
 export type RegenerateableSection = 'description' | 'variants' | 'tags';
@@ -49,4 +61,14 @@ export interface MarketingKickstart {
   socialMediaPosts: SocialMediaPost[];
   adCopy: AdCopy[];
   launchEmail: LaunchEmail;
+}
+
+export interface FinancialAssumptions {
+  costOfGoodsSoldCents: number;
+  monthlyMarketingBudgetCents: number;
+}
+
+export interface FinancialProjections extends FinancialAssumptions {
+  sellingPriceCents: number;
+  estimatedMonthlySales: number;
 }
