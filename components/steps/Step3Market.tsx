@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { CompetitiveAnalysis } from '../../types';
-import { generateCompetitiveAnalysis } from '../../services/geminiService';
+import { CompetitiveAnalysis, SWOTAnalysis, CustomerPersona, ProductPlan } from '../../types';
+import { generateCompetitiveAnalysis, generateSWOTAnalysis, generateCustomerPersona } from '../../services/geminiService';
 import CompetitiveAnalysisCard from '../CompetitiveAnalysisCard';
+import SWOTAnalysisCard from '../SWOTAnalysisCard';
+import CustomerPersonaCard from '../CustomerPersonaCard';
 import { Button } from '../ui/Button';
 
 interface Step3MarketProps {
+    productPlan: ProductPlan;
     productIdea: string;
     brandVoice: string;
     analysis: CompetitiveAnalysis | null;
     setAnalysis: React.Dispatch<React.SetStateAction<CompetitiveAnalysis | null>>;
+    swotAnalysis: SWOTAnalysis | null;
+    setSwotAnalysis: React.Dispatch<React.SetStateAction<SWOTAnalysis | null>>;
+    customerPersona: CustomerPersona | null;
+    setCustomerPersona: React.Dispatch<React.SetStateAction<CustomerPersona | null>>;
+    personaAvatarUrl: string | null;
+    setPersonaAvatarUrl: React.Dispatch<React.SetStateAction<string | null>>;
     onNavigateToLaunchpad: () => void;
     onBack: () => void;
 }
@@ -25,10 +34,17 @@ const LoadingSpinner = ({ message }: { message: string }) => (
 
 
 const Step3Market: React.FC<Step3MarketProps> = ({
+    productPlan,
     productIdea,
     brandVoice,
     analysis,
     setAnalysis,
+    swotAnalysis,
+    setSwotAnalysis,
+    customerPersona,
+    setCustomerPersona,
+    personaAvatarUrl,
+    setPersonaAvatarUrl,
     onNavigateToLaunchpad,
     onBack,
 }) => {
@@ -36,23 +52,34 @@ const Step3Market: React.FC<Step3MarketProps> = ({
     const [analysisError, setAnalysisError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!analysis && productIdea) {
+        // Fetch if any of the three analyses are missing
+        if ((!analysis || !swotAnalysis || !customerPersona) && productPlan) { 
             const fetchAnalysis = async () => {
                 setIsAnalyzing(true);
                 setAnalysisError(null);
                 try {
-                    const result = await generateCompetitiveAnalysis(productIdea, brandVoice);
-                    setAnalysis(result);
+                    const targetAudienceMatch = productPlan.description.match(/Target Audience:\s*([\s\S]+)/i);
+                    const targetAudience = targetAudienceMatch ? targetAudienceMatch[1].trim() : productPlan.description;
+
+                    // Use Promise.all to fetch concurrently
+                    const [analysisResult, swotResult, personaResult] = await Promise.all([
+                        analysis ? Promise.resolve(analysis) : generateCompetitiveAnalysis(productIdea, brandVoice),
+                        swotAnalysis ? Promise.resolve(swotAnalysis) : generateSWOTAnalysis(productIdea, brandVoice),
+                        customerPersona ? Promise.resolve(customerPersona) : generateCustomerPersona(productIdea, targetAudience, brandVoice)
+                    ]);
+                    setAnalysis(analysisResult);
+                    setSwotAnalysis(swotResult);
+                    setCustomerPersona(personaResult);
                 } catch (err) {
                     console.error(err);
-                    setAnalysisError('Failed to generate competitive analysis. Please try again.');
+                    setAnalysisError('Failed to generate market analysis. Please try again.');
                 } finally {
                     setIsAnalyzing(false);
                 }
             };
             fetchAnalysis();
         }
-    }, [analysis, productIdea, setAnalysis, brandVoice]);
+    }, [analysis, swotAnalysis, customerPersona, productPlan, productIdea, setAnalysis, setSwotAnalysis, setCustomerPersona, brandVoice]);
 
 
     return (
@@ -62,11 +89,25 @@ const Step3Market: React.FC<Step3MarketProps> = ({
                     <p>{analysisError}</p>
                 </div>
             )}
-            {isAnalyzing && <LoadingSpinner message="Analyzing market intelligence..." />}
-            {analysis && !isAnalyzing && <CompetitiveAnalysisCard analysis={analysis} />}
+            {isAnalyzing && <LoadingSpinner message="Analyzing market, strategy, and customers..." />}
+            
+            {!isAnalyzing && (
+                <>
+                    {customerPersona && (
+                        <CustomerPersonaCard 
+                            persona={customerPersona}
+                            avatarUrl={personaAvatarUrl}
+                            setAvatarUrl={setPersonaAvatarUrl}
+                        />
+                    )}
+                    {analysis && <CompetitiveAnalysisCard analysis={analysis} />}
+                    {swotAnalysis && <SWOTAnalysisCard analysis={swotAnalysis} />}
+                </>
+            )}
+            
             <div className="flex justify-between items-center">
                 <Button variant="outline" onClick={onBack}>Back</Button>
-                <Button onClick={onNavigateToLaunchpad} disabled={!analysis || isAnalyzing}>
+                <Button onClick={onNavigateToLaunchpad} disabled={!analysis || !swotAnalysis || !customerPersona || isAnalyzing}>
                     {'Next: Plan Launch'}
                 </Button>
             </div>

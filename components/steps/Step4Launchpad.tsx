@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage, CompetitiveAnalysis } from '../../types';
-import { generateMarketingKickstart, generateFinancialAssumptions, generateNextSteps } from '../../services/geminiService';
+import { ProductPlan, MarketingKickstart, FinancialProjections, NextStepItem, ChatMessage, CompetitiveAnalysis, BrandIdentityKit, ShopifyIntegration } from '../../types';
+import { generateMarketingKickstart, generateFinancialAssumptions, generateNextSteps, generateStorefrontMockup } from '../../services/geminiService';
 import MarketingKickstartCard from '../MarketingKickstartCard';
 import FinancialProjectionsCard from '../FinancialProjectionsCard';
 import NextStepsCard from '../NextStepsCard';
 import ChatCard from '../ChatCard';
+import StorefrontMockupCard from '../StorefrontMockupCard';
+import ShopifyIntegrationCard from '../ShopifyIntegrationCard';
 import { Button } from '../ui/Button';
 import ExportControls from '../ExportControls';
 
@@ -26,6 +28,11 @@ interface Step4LaunchpadProps {
     onPlanModified: () => void;
     logoImageUrl: string | null;
     analysis: CompetitiveAnalysis | null;
+    brandKit: BrandIdentityKit | null;
+    storefrontMockupUrl: string | null;
+    setStorefrontMockupUrl: React.Dispatch<React.SetStateAction<string | null>>;
+    shopifyIntegration: ShopifyIntegration | null;
+    setShopifyIntegration: React.Dispatch<React.SetStateAction<ShopifyIntegration | null>>;
 }
 
 const LoadingSpinner = ({ message }: { message: string }) => (
@@ -56,10 +63,17 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
     onPlanModified,
     logoImageUrl,
     analysis,
+    brandKit,
+    storefrontMockupUrl,
+    setStorefrontMockupUrl,
+    shopifyIntegration,
+    setShopifyIntegration,
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isRegeneratingFinancials, setIsRegeneratingFinancials] = useState(false);
+    const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
+
 
     useEffect(() => {
         if (!marketingPlan && !financials && !nextSteps && productPlan) {
@@ -100,7 +114,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
         try {
             const newAssumptions = await generateFinancialAssumptions(productPlan);
             setFinancials(prev => ({
-                ...(prev || { sellingPriceCents: productPlan.priceCents }),
+                ...(prev || { sellingPriceCents: productPlan.priceCents, estimatedMonthlySales: 50, costOfGoodsSoldCents: 0, monthlyMarketingBudgetCents: 0 }),
                 ...newAssumptions
             }));
             onPlanModified();
@@ -111,6 +125,22 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
             setIsRegeneratingFinancials(false);
         }
     }, [productPlan, setFinancials, onPlanModified]);
+
+    const handleGenerateMockup = useCallback(async () => {
+        if (!productPlan || !brandKit) return;
+        setIsGeneratingMockup(true);
+        setError(null);
+        try {
+            const mockupUrl = await generateStorefrontMockup(productPlan, brandKit);
+            setStorefrontMockupUrl(mockupUrl);
+            onPlanModified();
+        } catch (err) {
+            console.error("Failed to generate mockup", err);
+            setError('Failed to generate storefront mockup. Please try again.');
+        } finally {
+            setIsGeneratingMockup(false);
+        }
+    }, [productPlan, brandKit, setStorefrontMockupUrl, onPlanModified]);
 
     const handleFinancialsChange = (newFinancials: FinancialProjections) => {
         setFinancials(newFinancials);
@@ -178,6 +208,21 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = ({
                         financials={financials}
                         nextSteps={nextSteps}
                     />
+                    <ShopifyIntegrationCard
+                        productPlan={productPlan}
+                        logoImageUrl={logoImageUrl}
+                        storefrontMockupUrl={storefrontMockupUrl}
+                        integrationConfig={shopifyIntegration}
+                        setIntegrationConfig={setShopifyIntegration}
+                        onPlanModified={onPlanModified}
+                    />
+                     {brandKit && (
+                        <StorefrontMockupCard
+                            onGenerate={handleGenerateMockup}
+                            isGenerating={isGeneratingMockup}
+                            mockupUrl={storefrontMockupUrl}
+                        />
+                    )}
                     {chatHistory && productPlan && (
                         <ChatCard 
                             productPlan={productPlan}

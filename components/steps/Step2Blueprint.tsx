@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { ProductPlan, ProductVariant, RegenerateableSection } from '../../types';
-import { generateLogo, regeneratePlanSection, generateProductPlan } from '../../services/geminiService';
+import { ProductPlan, ProductVariant, RegenerateableSection, BrandIdentityKit } from '../../types';
+import { generateLogo, regeneratePlanSection, generateProductPlan, generateBrandIdentity } from '../../services/geminiService';
 import ProductPlanCard from '../ProductPlanCard';
+import BrandIdentityCard from '../BrandIdentityCard';
 import { Button } from '../ui/Button';
 
 interface Step2BlueprintProps {
@@ -11,6 +12,8 @@ interface Step2BlueprintProps {
     onPlanChange: (updatedPlan: ProductPlan) => void;
     logoImageUrl: string | null;
     setLogoImageUrl: (url: string | null) => void;
+    brandKit: BrandIdentityKit | null;
+    setBrandKit: (kit: BrandIdentityKit | null) => void;
     onSavePlan: () => void;
     isPlanSaved: boolean;
     onNavigateToMarket: () => void;
@@ -24,6 +27,8 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
     onPlanChange,
     logoImageUrl,
     setLogoImageUrl,
+    brandKit,
+    setBrandKit,
     onSavePlan,
     isPlanSaved,
     onNavigateToMarket,
@@ -39,6 +44,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
         variants: false,
         tags: false,
     });
+    const [isGeneratingKit, setIsGeneratingKit] = useState<boolean>(false);
 
     const handleGenerateLogo = useCallback(async () => {
         if (!plan || isGeneratingLogo) return;
@@ -55,6 +61,20 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
             setIsGeneratingLogo(false);
         }
     }, [plan, isGeneratingLogo, logoStyle, logoColor, setLogoImageUrl]);
+
+    const handleGenerateKit = useCallback(async () => {
+        if (!plan || isGeneratingKit) return;
+        setIsGeneratingKit(true);
+        try {
+            const kit = await generateBrandIdentity(plan, brandVoice);
+            setBrandKit(kit);
+        } catch (err) {
+            console.error(err);
+            // Optionally, set an error state to show the user
+        } finally {
+            setIsGeneratingKit(false);
+        }
+    }, [plan, isGeneratingKit, brandVoice, setBrandKit]);
 
     const handleRegenerateSection = useCallback(async (section: RegenerateableSection) => {
         if (!plan) return;
@@ -84,8 +104,8 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
     setLogoError(null);
 
     try {
-      const plan = await generateProductPlan(productIdea, brandVoice, updatedVariants);
-      onPlanChange(plan);
+      const { plan: newPlan } = await generateProductPlan(productIdea, brandVoice, updatedVariants);
+      onPlanChange(newPlan);
     } catch (err) {
       console.error(err);
       // You might want to show an error to the user here
@@ -118,6 +138,27 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
                 logoColor={logoColor}
                 onLogoColorChange={setLogoColor}
             />
+
+            {logoImageUrl && !brandKit && (
+                 <div className="text-center">
+                    <Button onClick={handleGenerateKit} disabled={isGeneratingKit}>
+                         {isGeneratingKit ? (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Generating Kit...
+                            </>
+                        ) : (
+                            '✨ Generate Brand Identity Kit'
+                        )}
+                    </Button>
+                </div>
+            )}
+           
+            {brandKit && <BrandIdentityCard brandKit={brandKit} />}
+
             <div className="flex justify-between items-center">
                 <Button variant="outline" onClick={onBack}>Back</Button>
                 <Button onClick={onNavigateToMarket}>{'Next: Analyze Market'}</Button>

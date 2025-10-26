@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage, SMARTGoals } from './types';
+import { ProductPlan, MarketingKickstart, CompetitiveAnalysis, FinancialProjections, NextStepItem, SavedVenture, ChatMessage, SMARTGoals, PriceHistoryPoint, SWOTAnalysis, CustomerPersona, BrandIdentityKit, ShopifyIntegration } from './types';
 import { generateProductPlan } from './services/geminiService';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -10,6 +10,22 @@ import Step3Market from './components/steps/Step3Market';
 import Step4Launchpad from './components/steps/Step4Launchpad';
 import MyVenturesDashboard from './components/MyVenturesDashboard';
 import ProductScout from './components/ProductScout';
+
+const generateMockPriceHistory = (basePriceCents: number): PriceHistoryPoint[] => {
+    const history: PriceHistoryPoint[] = [];
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const fluctuation = (Math.random() - 0.5) * 0.3; // Fluctuate by +/- 15%
+        const price = Math.round(basePriceCents * (1 + fluctuation));
+        history.push({
+            date: date.toISOString(),
+            priceCents: price,
+        });
+    }
+    return history;
+};
 
 
 const App: React.FC = () => {
@@ -30,11 +46,17 @@ const App: React.FC = () => {
 
   const [smartGoals, setSmartGoals] = useState<SMARTGoals | null>(null);
   const [analysis, setAnalysis] = useState<CompetitiveAnalysis | null>(null);
+  const [swotAnalysis, setSwotAnalysis] = useState<SWOTAnalysis | null>(null);
+  const [customerPersona, setCustomerPersona] = useState<CustomerPersona | null>(null);
+  const [personaAvatarUrl, setPersonaAvatarUrl] = useState<string | null>(null);
   const [logoImageUrl, setLogoImageUrl] = useState<string | null>(null);
+  const [brandKit, setBrandKit] = useState<BrandIdentityKit | null>(null);
   const [marketingPlan, setMarketingPlan] = useState<MarketingKickstart | null>(null);
   const [financials, setFinancials] = useState<FinancialProjections | null>(null);
   const [nextSteps, setNextSteps] = useState<NextStepItem[] | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[] | null>(null);
+  const [storefrontMockupUrl, setStorefrontMockupUrl] = useState<string | null>(null);
+  const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
 
 
   const VENTURES_STORAGE_KEY = 'myVentures';
@@ -68,11 +90,17 @@ const App: React.FC = () => {
     setProductPlan(null);
     setSmartGoals(null);
     setLogoImageUrl(null);
+    setBrandKit(null);
     setAnalysis(null);
+    setSwotAnalysis(null);
+    setCustomerPersona(null);
+    setPersonaAvatarUrl(null);
     setMarketingPlan(null);
     setFinancials(null);
     setNextSteps(null);
     setChatHistory(null);
+    setStorefrontMockupUrl(null);
+    setShopifyIntegration(null);
     setCurrentVentureId(null);
     setIsPlanSaved(false);
     setBrandVoice('Knowledgeable & Trustworthy Dad');
@@ -127,11 +155,18 @@ const App: React.FC = () => {
         brandVoice,
         goals: smartGoals,
         logoImageUrl,
+        brandKit,
         analysis,
+        swotAnalysis,
+        customerPersona,
+        personaAvatarUrl,
         marketingPlan,
         financials,
         nextSteps,
-        chatHistory
+        chatHistory,
+        storefrontMockupUrl,
+        shopifyIntegration,
+        priceHistory: generateMockPriceHistory(productPlan.priceCents)
     };
 
     let newVentures: SavedVenture[];
@@ -158,7 +193,7 @@ const App: React.FC = () => {
     localStorage.setItem(VENTURES_STORAGE_KEY, JSON.stringify(newVentures));
     setIsPlanSaved(true);
 
-  }, [productPlan, brandVoice, smartGoals, logoImageUrl, analysis, marketingPlan, financials, nextSteps, chatHistory, ventures, currentVentureId]);
+  }, [productPlan, brandVoice, smartGoals, logoImageUrl, brandKit, analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan, financials, nextSteps, chatHistory, storefrontMockupUrl, shopifyIntegration, ventures, currentVentureId]);
 
 
   const handleLoadVenture = useCallback((ventureId: string) => {
@@ -171,11 +206,17 @@ const App: React.FC = () => {
       setBrandVoice(data.brandVoice || 'Knowledgeable & Trustworthy Dad');
       setSmartGoals(data.goals || null);
       setLogoImageUrl(data.logoImageUrl || null);
+      setBrandKit(data.brandKit || null);
       setAnalysis(data.analysis || null);
+      setSwotAnalysis(data.swotAnalysis || null);
+      setCustomerPersona(data.customerPersona || null);
+      setPersonaAvatarUrl(data.personaAvatarUrl || null);
       setMarketingPlan(data.marketingPlan || null);
       setFinancials(data.financials || null);
       setNextSteps(data.nextSteps || null);
       setChatHistory(data.chatHistory || null);
+      setStorefrontMockupUrl(data.storefrontMockupUrl || null);
+      setShopifyIntegration(data.shopifyIntegration || null);
       setCurrentVentureId(ventureToLoad.id);
       setIsPlanSaved(true);
       setError(null);
@@ -244,6 +285,8 @@ const App: React.FC = () => {
             onPlanChange={handlePlanChange}
             logoImageUrl={logoImageUrl}
             setLogoImageUrl={setLogoImageUrl}
+            brandKit={brandKit}
+            setBrandKit={setBrandKit}
             onSavePlan={handleSaveVenture}
             isPlanSaved={isPlanSaved}
             onNavigateToMarket={() => setCurrentStep(3)}
@@ -251,12 +294,19 @@ const App: React.FC = () => {
           />
         );
       case 3:
-        return (
+        return productPlan && (
           <Step3Market
+            productPlan={productPlan}
             productIdea={productIdea}
             brandVoice={brandVoice}
             analysis={analysis}
             setAnalysis={setAnalysis}
+            swotAnalysis={swotAnalysis}
+            setSwotAnalysis={setSwotAnalysis}
+            customerPersona={customerPersona}
+            setCustomerPersona={setCustomerPersona}
+            personaAvatarUrl={personaAvatarUrl}
+            setPersonaAvatarUrl={setPersonaAvatarUrl}
             onNavigateToLaunchpad={() => setCurrentStep(4)}
             onBack={() => setCurrentStep(2)}
           />
@@ -281,6 +331,11 @@ const App: React.FC = () => {
                 onPlanModified={handlePlanModified}
                 logoImageUrl={logoImageUrl}
                 analysis={analysis}
+                brandKit={brandKit}
+                storefrontMockupUrl={storefrontMockupUrl}
+                setStorefrontMockupUrl={setStorefrontMockupUrl}
+                shopifyIntegration={shopifyIntegration}
+                setShopifyIntegration={setShopifyIntegration}
             />
           );
       default:

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { SavedVenture } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import PriceHistoryChart from './PriceHistoryChart';
 
 interface MyVenturesDashboardProps {
     ventures: SavedVenture[];
@@ -156,6 +157,14 @@ const MyVenturesDashboard: React.FC<MyVenturesDashboardProps> = ({ ventures, onL
                                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                                 Product: {venture.data.plan.productTitle} &middot; Last modified: {new Date(venture.lastModified).toLocaleDateString()}
                                             </p>
+                                            {venture.data.priceHistory && venture.data.priceHistory.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                                                    <PriceHistoryChart 
+                                                        data={venture.data.priceHistory} 
+                                                        currency={venture.data.plan.currency}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2 flex-shrink-0">
                                              <Button size="sm" variant="outline" onClick={() => handleRenameStart(venture)} aria-label={`Rename ${venture.name}`}>

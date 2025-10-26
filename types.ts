@@ -6,6 +6,11 @@ export interface ProductVariant {
     stock: number;
 }
 
+export interface PriceHistoryPoint {
+    date: string;
+    priceCents: number;
+}
+
 export interface ProductPlan {
     productTitle: string;
     slug: string;
@@ -25,6 +30,19 @@ export interface GroundingSource {
     title: string;
 }
 
+export interface BrandIdentityKit {
+    colorPalette: {
+        primary: string;
+        secondary: string;
+        accent: string;
+    };
+    typography: {
+        headingFont: string;
+        bodyFont: string;
+    };
+    missionStatement: string;
+}
+
 export interface CompetitiveAnalysis {
     opportunityScore: number;
     marketSummary: string;
@@ -36,6 +54,25 @@ export interface CompetitiveAnalysis {
     }[];
     differentiationStrategies: string[];
     sources?: GroundingSource[];
+}
+
+export interface SWOTAnalysis {
+    strengths: string[];
+    weaknesses: string[];
+    opportunities: string[];
+    threats: string[];
+}
+
+export interface CustomerPersona {
+    name: string;
+    age: number;
+    occupation: string;
+    quote: string;
+    background: string;
+    motivations: string[];
+    goals: string[];
+    painPoints: string[];
+    avatarPrompt: string;
 }
 
 export interface MarketingKickstart {
@@ -92,6 +129,14 @@ export interface SMARTGoals {
     timeBound: SMARTGoal;
 }
 
+export interface ShopifyIntegration {
+    storeUrl: string;
+    apiToken: string;
+    lastPushStatus: 'success' | 'failed' | null;
+    lastPushDate: string | null;
+    lastPushedProductId: string | null;
+}
+
 export interface SavedVenture {
     id: string;
     name: string;
@@ -101,11 +146,18 @@ export interface SavedVenture {
         brandVoice: string;
         goals: SMARTGoals | null;
         logoImageUrl: string | null;
+        brandKit: BrandIdentityKit | null;
         analysis: CompetitiveAnalysis | null;
+        swotAnalysis: SWOTAnalysis | null;
+        customerPersona: CustomerPersona | null;
+        personaAvatarUrl: string | null;
         marketingPlan: MarketingKickstart | null;
         financials: FinancialProjections | null;
         nextSteps: NextStepItem[] | null;
         chatHistory: ChatMessage[] | null;
+        storefrontMockupUrl: string | null;
+        priceHistory: PriceHistoryPoint[] | null;
+        shopifyIntegration: ShopifyIntegration | null;
     }
 }
 

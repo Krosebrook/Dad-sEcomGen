@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
-import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage, ProductScoutResult, SMARTGoals } from '../types';
+import { ProductPlan, ProductVariant, RegenerateableSection, MarketingKickstart, CompetitiveAnalysis, GroundingSource, FinancialAssumptions, ChatMessage, ProductScoutResult, SMARTGoals, SWOTAnalysis, CustomerPersona, BrandIdentityKit } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable is not set");
@@ -74,6 +74,31 @@ const planAndGoalsSchema = {
     required: ['plan', 'goals']
 };
 
+const brandIdentitySchema = {
+    type: Type.OBJECT,
+    properties: {
+        colorPalette: {
+            type: Type.OBJECT,
+            properties: {
+                primary: { type: Type.STRING, description: "A primary hex color code (e.g., '#1A2B3C')." },
+                secondary: { type: Type.STRING, description: "A secondary, complementary hex color code." },
+                accent: { type: Type.STRING, description: "An accent hex color code for call-to-actions." }
+            },
+            required: ['primary', 'secondary', 'accent']
+        },
+        typography: {
+            type: Type.OBJECT,
+            properties: {
+                headingFont: { type: Type.STRING, description: "The name of a professional, legible heading font (e.g., 'Montserrat', 'Playfair Display')." },
+                bodyFont: { type: Type.STRING, description: "The name of a clean, readable body font that pairs well with the heading font (e.g., 'Lato', 'Open Sans')." }
+            },
+            required: ['headingFont', 'bodyFont']
+        },
+        missionStatement: { type: Type.STRING, description: "A concise, one-sentence mission statement that captures the brand's essence." }
+    },
+    required: ['colorPalette', 'typography', 'missionStatement']
+};
+
 
 const competitiveAnalysisSchema = {
     type: Type.OBJECT,
@@ -101,6 +126,49 @@ const competitiveAnalysisSchema = {
         }
     },
     required: ['opportunityScore', 'marketSummary', 'competitors', 'differentiationStrategies']
+};
+
+const swotAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        strengths: {
+            type: Type.ARRAY,
+            description: "A list of 3-4 key internal strengths for this product/venture.",
+            items: { type: Type.STRING }
+        },
+        weaknesses: {
+            type: Type.ARRAY,
+            description: "A list of 3-4 key internal weaknesses for this product/venture.",
+            items: { type: Type.STRING }
+        },
+        opportunities: {
+            type: Type.ARRAY,
+            description: "A list of 3-4 key external market opportunities to capitalize on.",
+            items: { type: Type.STRING }
+        },
+        threats: {
+            type: Type.ARRAY,
+            description: "A list of 3-4 key external market threats to be aware of.",
+            items: { type: Type.STRING }
+        }
+    },
+    required: ['strengths', 'weaknesses', 'opportunities', 'threats']
+};
+
+const customerPersonaSchema = {
+    type: Type.OBJECT,
+    properties: {
+        name: { type: Type.STRING, description: "A creative, alliterative name for the persona (e.g., 'Creative Carla', 'Tech-Savvy Tom')." },
+        age: { type: Type.INTEGER, description: "The persona's age." },
+        occupation: { type: Type.STRING, description: "The persona's job title or occupation." },
+        quote: { type: Type.STRING, description: "A short, memorable quote that encapsulates the persona's mindset." },
+        background: { type: Type.STRING, description: "A 2-3 sentence background story for the persona." },
+        motivations: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 key motivations or drivers for the persona." },
+        goals: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 goals the persona is trying to achieve, relevant to the product." },
+        painPoints: { type: Type.ARRAY, items: { type: Type.STRING }, description: "A list of 3-4 frustrations or 'pain points' the persona experiences that the product can solve." },
+        avatarPrompt: { type: Type.STRING, description: "A detailed prompt for an image generation model to create a photorealistic headshot of this persona. Describe their appearance, expression, and background setting. Example: 'Photorealistic headshot of a friendly 42-year-old male architect with short brown hair and glasses, smiling in a well-lit, modern office setting.'" }
+    },
+    required: ['name', 'age', 'occupation', 'quote', 'background', 'motivations', 'goals', 'painPoints', 'avatarPrompt']
 };
 
 
@@ -352,6 +420,84 @@ export const generateCompetitiveAnalysis = async (productIdea: string, brandVoic
     }
 };
 
+export const generateSWOTAnalysis = async (productIdea: string, brandVoice: string): Promise<SWOTAnalysis> => {
+    const systemInstruction = `You are a senior business strategist. Based on the user's product idea, generate a concise and insightful SWOT (Strengths, Weaknesses, Opportunities, Threats) analysis. The analysis should be realistic and provide actionable insights. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: `Generate a SWOT analysis for this product idea: ${productIdea}.`,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: swotAnalysisSchema,
+        },
+    });
+    
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API for SWOT analysis.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as SWOTAnalysis;
+    } catch (e) {
+        console.error("Failed to parse Gemini response for SWOT analysis:", jsonText, e);
+        throw new Error("Received invalid JSON from the API for SWOT analysis.");
+    }
+};
+
+export const generateCustomerPersona = async (productIdea: string, targetAudience: string, brandVoice: string): Promise<CustomerPersona> => {
+    const systemInstruction = `You are a senior marketing strategist and consumer psychologist. Based on the user's product idea and a description of their target audience, create a single, detailed, and realistic customer persona. This persona should bring the ideal customer to life. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+    
+    const userContent = `Product Idea: "${productIdea}"\nTarget Audience Description: "${targetAudience}"\n\nGenerate a customer persona based on this information.`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: customerPersonaSchema,
+        },
+    });
+    
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API for customer persona.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as CustomerPersona;
+    } catch (e) {
+        console.error("Failed to parse Gemini response for customer persona:", jsonText, e);
+        throw new Error("Received invalid JSON from the API for customer persona.");
+    }
+};
+
+export const generatePersonaAvatar = async (avatarPrompt: string): Promise<string> => {
+    const response = await ai.models.generateContent({
+        model: IMAGE_MODEL_NAME,
+        contents: {
+            parts: [{ text: avatarPrompt }],
+        },
+        config: {
+            responseModalities: [Modality.IMAGE],
+        },
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+            const base64ImageBytes: string = part.inlineData.data;
+            return `data:image/png;base64,${base64ImageBytes}`;
+        }
+    }
+
+    throw new Error("No avatar image was generated by the API.");
+};
+
+
 export const generateMarketingKickstart = async (productPlan: ProductPlan, brandVoice: string): Promise<MarketingKickstart> => {
     const systemInstruction = `You are a senior digital marketing strategist specializing in e-commerce launches. Based on the provided product plan, generate a "Marketing Kickstart" package. The tone should be engaging and targeted towards the product's audience. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
     
@@ -444,6 +590,37 @@ export const generateNextSteps = async (productPlan: ProductPlan, brandVoice: st
     } catch (e) {
         console.error("Failed to parse Gemini response for next steps:", jsonText, e);
         throw new Error("Received invalid JSON from the API for next steps.");
+    }
+};
+
+export const generateBrandIdentity = async (productPlan: ProductPlan, brandVoice: string): Promise<BrandIdentityKit> => {
+    const systemInstruction = `You are a professional brand strategist and designer. Based on the user's product plan, generate a complete "Brand Identity Kit". This should include a cohesive color palette, appropriate typography pairings, and a strong mission statement. Your writing style should embody the following brand voice: '${brandVoice}'. Your response MUST be a single, valid JSON object that conforms to the provided schema. Do not include any text, explanation, or markdown formatting before or after the JSON object.`;
+    
+    const userContent = `Generate a brand identity kit for the following product:\n
+    Product Title: ${productPlan.productTitle}\n
+    Description: ${productPlan.description}`;
+
+    const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: userContent,
+        config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: brandIdentitySchema,
+        },
+    });
+    
+    const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the API for brand identity.");
+    }
+
+    try {
+        const parsedJson = JSON.parse(jsonText);
+        return parsedJson as BrandIdentityKit;
+    } catch (e) {
+        console.error("Failed to parse Gemini response for brand identity:", jsonText, e);
+        throw new Error("Received invalid JSON from the API for brand identity.");
     }
 };
 
@@ -558,4 +735,48 @@ export const scoutTrendingProducts = async (category: string): Promise<ProductSc
         console.error("Failed to parse Gemini response for scout:", jsonText, e);
         throw new Error("Received invalid JSON from the scout API.");
     }
+};
+
+export const generateStorefrontMockup = async (productPlan: ProductPlan, brandKit: BrandIdentityKit): Promise<string> => {
+    const prompt = `Create a visually appealing, clean, and modern e-commerce product page mockup for a product called '${productPlan.productTitle}'. The style should be professional and trustworthy, suitable for a direct-to-consumer brand.
+
+    **Layout:**
+    - A clean header with a placeholder for a logo and navigation links.
+    - The main content area should have a large product image on the left.
+    - On the right, display the product title in a large, clear font, followed by the price, a short product description snippet, a quantity selector, and a prominent 'Add to Cart' button.
+
+    **Branding & Style:**
+    - The primary color for the 'Add to Cart' button and other key highlights must be '${brandKit.colorPalette.primary}'.
+    - Use '${brandKit.colorPalette.secondary}' for background elements or secondary accents.
+    - The overall color scheme should be light and airy, using plenty of white space.
+    - The font for headings should be a clean, sans-serif font similar to '${brandKit.typography.headingFont}'.
+    - The font for body text should be a highly legible sans-serif font like '${brandKit.typography.bodyFont}'.
+
+    **Content Details:**
+    - Product Title: "${productPlan.productTitle}"
+    - Price: Display a price around ${(productPlan.priceCents / 100).toFixed(2)} ${productPlan.currency}.
+    - Description Snippet: Include a short piece of text like "${productPlan.description.split('.')[0]}."
+    - Product Image: The main image should be a high-quality, professional photograph of the product, presented as if for a real online store. The product is: ${productPlan.description.substring(0, 200)}.
+
+    The final output should be a single, complete image of the website mockup.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: IMAGE_MODEL_NAME,
+        contents: {
+            parts: [{ text: prompt }],
+        },
+        config: {
+            responseModalities: [Modality.IMAGE],
+        },
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+            const base64ImageBytes: string = part.inlineData.data;
+            return `data:image/png;base64,${base64ImageBytes}`;
+        }
+    }
+
+    throw new Error("No storefront mockup image was generated by the API.");
 };
