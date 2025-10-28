@@ -1,4 +1,3 @@
-
 export interface ProductVariant {
   title: string;
   sku: string;
@@ -16,9 +15,12 @@ export interface ProductPlan {
   stock: number;
   variants: ProductVariant[];
   tags: string[];
+  materials: string[];
+  dimensions: string;
+  weightGrams: number;
 }
 
-export type RegenerateableSection = 'description' | 'variants' | 'tags';
+export type RegenerateableSection = 'description' | 'variants' | 'tags' | 'materials';
 
 export interface SocialMediaPost {
   platform: string;
@@ -31,6 +33,11 @@ export interface AdCopy {
   platform: string;
   headlines: string[];
   descriptions: string[];
+  audienceTargeting: {
+    demographics: string[];
+    interests: string[];
+    keywords: string[];
+  };
 }
 
 export interface LaunchEmail {
@@ -128,6 +135,61 @@ export interface NextStepItem {
   completed: boolean;
 }
 
+export interface AdSet {
+    adSetName: string;
+    targetingSummary: string;
+    dailyBudgetCents: number;
+    adCreativeNotes: string[];
+}
+
+export interface AdCampaign {
+    platform: string;
+    campaignName: string;
+    objective: string;
+    adSets: AdSet[];
+}
+
+export interface InfluencerMarketingPlan {
+    influencerTiers: string[];
+    outreachTemplate: string;
+    campaignIdeas: {
+        ideaName: string;
+        description: string;
+    }[];
+    kpiToTrack: string[];
+}
+
+export interface CustomerSupportPlaybook {
+    faq: {
+        question: string;
+        answer: string;
+    }[];
+    returnPolicySummary: string;
+    toneOfVoice: string;
+    sampleResponses: {
+        scenario: string;
+        response: string;
+    }[];
+}
+
+export interface PackagingExperience {
+    theme: string;
+    boxDescription: string;
+    insideBoxElements: string[];
+    sustainabilityNotes: string;
+}
+
+export interface LegalChecklistItem {
+    item: string;
+    description: string;
+    isCritical: boolean;
+}
+
+export interface LegalChecklist {
+    disclaimer: string;
+    checklistItems: LegalChecklistItem[];
+}
+
 export interface AppData {
     productIdea: string;
     brandVoice: string;
@@ -148,6 +210,11 @@ export interface AppData {
     shopifyIntegration: ShopifyIntegration | null;
     supplierQuotes: SupplierQuote[];
     priceHistory: PriceHistoryPoint[];
+    adCampaigns?: AdCampaign[];
+    influencerMarketingPlan?: InfluencerMarketingPlan;
+    customerSupportPlaybook?: CustomerSupportPlaybook;
+    packagingExperience?: PackagingExperience;
+    legalChecklist?: LegalChecklist;
 }
 
 export interface SavedVenture {

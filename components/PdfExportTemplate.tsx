@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem } from '../types';
+import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
 
 interface PdfExportTemplateProps {
     productPlan: ProductPlan;
@@ -9,6 +8,11 @@ interface PdfExportTemplateProps {
     marketingPlan: MarketingKickstart | null;
     financials: FinancialProjections | null;
     nextSteps: NextStepItem[] | null;
+    adCampaigns: AdCampaign[] | null;
+    influencerMarketingPlan: InfluencerMarketingPlan | null;
+    customerSupportPlaybook: CustomerSupportPlaybook | null;
+    packagingExperience: PackagingExperience | null;
+    legalChecklist: LegalChecklist | null;
 }
 
 const formatCurrency = (cents: number, currency: string = 'USD') => {
@@ -19,21 +23,19 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
   }).format(cents / 100);
 };
 
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="mb-8" style={{ pageBreakInside: 'avoid' }}>
+const Section: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
+    <div className={`mb-8 ${className}`} style={{ pageBreakInside: 'avoid' }}>
         <h2 className="text-2xl font-bold border-b-2 border-gray-800 pb-2 mb-4">{title}</h2>
         {children}
     </div>
 );
 
-const PdfExportTemplate: React.FC<PdfExportTemplateProps> = ({
-    productPlan,
-    logoImageUrl,
-    analysis,
-    marketingPlan,
-    financials,
-    nextSteps,
-}) => {
+const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
+    const {
+        productPlan, logoImageUrl, analysis, marketingPlan, financials, nextSteps,
+        adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist
+    } = props;
+
     return (
         <div className="bg-white text-gray-800 p-12 font-sans" style={{ width: '210mm' }}>
             {/* Cover Page */}
@@ -51,6 +53,12 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = ({
                     <thead><tr className="bg-gray-100"><th className="p-2">Price</th><th className="p-2">SKU</th><th className="p-2">Stock</th><th className="p-2">Currency</th></tr></thead>
                     <tbody><tr><td className="p-2 border">{formatCurrency(productPlan.priceCents, productPlan.currency)}</td><td className="p-2 border">{productPlan.sku}</td><td className="p-2 border">{productPlan.stock}</td><td className="p-2 border">{productPlan.currency}</td></tr></tbody>
                 </table>
+                 <h3 className="text-xl font-semibold mb-2">Specifications</h3>
+                <div className="p-2 border rounded mb-6">
+                    <p><strong>Materials:</strong> {productPlan.materials.join(', ')}</p>
+                    <p><strong>Dimensions:</strong> {productPlan.dimensions}</p>
+                    <p><strong>Weight:</strong> {productPlan.weightGrams}g</p>
+                </div>
                 {productPlan.variants.length > 0 && (
                     <>
                     <h3 className="text-xl font-semibold mb-2">Variants</h3>
@@ -78,7 +86,7 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = ({
 
             {/* Marketing Kickstart */}
             {marketingPlan && (
-                <Section title="Marketing Kickstart">
+                <Section title="Marketing Kickstart" className="break-before-page">
                     <h3 className="text-xl font-semibold mb-2">Social Media Posts</h3>
                     {marketingPlan.socialMediaPosts.map((p, i) => (<div key={i} className="mb-4 p-2 border rounded"><strong>{p.platform}:</strong><p className="whitespace-pre-wrap">{p.postText}</p><p><em>Hashtags: {p.hashtags.join(' ')}</em></p></div>))}
                     <h3 className="text-xl font-semibold mb-2 mt-6">Ad Copy</h3>
@@ -87,9 +95,73 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = ({
                     <div className="p-2 border rounded"><p><strong>Subject:</strong> {marketingPlan.launchEmail.subject}</p><p className="whitespace-pre-wrap mt-2">{marketingPlan.launchEmail.body}</p></div>
                 </Section>
             )}
+
+             {/* Ad Campaigns */}
+            {adCampaigns && (
+                <Section title="Ad Campaign Strategy">
+                     {adCampaigns.map((c, i) => (
+                        <div key={i} className="mb-6 p-2 border rounded">
+                            <h3 className="text-xl font-semibold">{c.platform} - {c.campaignName}</h3>
+                            <p><strong>Objective:</strong> {c.objective}</p>
+                            {c.adSets.map((as, j) => (
+                                <div key={j} className="mt-2 pl-4 border-l-2">
+                                    <h4 className="font-semibold">{as.adSetName}</h4>
+                                    <p><strong>Targeting:</strong> {as.targetingSummary}</p>
+                                    <p><strong>Budget:</strong> {formatCurrency(as.dailyBudgetCents)}/day</p>
+                                    <p><strong>Creative Notes:</strong></p>
+                                    <ul className="list-disc list-inside pl-4">
+                                        {as.adCreativeNotes.map((note, k) => <li key={k}>{note}</li>)}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                     ))}
+                </Section>
+            )}
+
+            {/* Influencer Marketing */}
+            {influencerMarketingPlan && (
+                <Section title="Influencer Marketing Plan">
+                    <p><strong>Target Tiers:</strong> {influencerMarketingPlan.influencerTiers.join(', ')}</p>
+                    <p><strong>KPIs to Track:</strong> {influencerMarketingPlan.kpiToTrack.join(', ')}</p>
+                    <h3 className="text-xl font-semibold mt-4 mb-2">Outreach Template</h3>
+                    <pre className="p-2 border rounded bg-gray-50 whitespace-pre-wrap font-sans">{influencerMarketingPlan.outreachTemplate}</pre>
+                    <h3 className="text-xl font-semibold mt-4 mb-2">Campaign Ideas</h3>
+                    <ul className="list-disc list-inside">
+                        {influencerMarketingPlan.campaignIdeas.map((idea, i) => <li key={i}><strong>{idea.ideaName}:</strong> {idea.description}</li>)}
+                    </ul>
+                </Section>
+            )}
             
-            {/* Financials & Action Plan */}
             <div style={{ pageBreakBefore: 'always' }}>
+                 {/* Customer Support */}
+                {customerSupportPlaybook && (
+                    <Section title="Customer Support Playbook">
+                        <p><strong>Tone of Voice:</strong> {customerSupportPlaybook.toneOfVoice}</p>
+                        <p><strong>Return Policy Summary:</strong> {customerSupportPlaybook.returnPolicySummary}</p>
+                        <h3 className="text-xl font-semibold mt-4 mb-2">FAQs</h3>
+                        {customerSupportPlaybook.faq.map((f, i) => <div key={i} className="mb-2"><p><strong>Q: {f.question}</strong></p><p>A: {f.answer}</p></div>)}
+                        <h3 className="text-xl font-semibold mt-4 mb-2">Sample Responses</h3>
+                        {customerSupportPlaybook.sampleResponses.map((r, i) => <div key={i} className="mb-2"><p><strong>Scenario: {r.scenario}</strong></p><p className="italic">"{r.response}"</p></div>)}
+                    </Section>
+                )}
+
+                 {/* Packaging */}
+                {packagingExperience && (
+                    <Section title="Packaging & Unboxing">
+                        <p><strong>Theme:</strong> {packagingExperience.theme}</p>
+                        <p><strong>Box Description:</strong> {packagingExperience.boxDescription}</p>
+                        <h3 className="text-xl font-semibold mt-4 mb-2">Inside Elements</h3>
+                        <ul className="list-disc list-inside">
+                            {packagingExperience.insideBoxElements.map((el, i) => <li key={i}>{el}</li>)}
+                        </ul>
+                        <p className="mt-2"><strong>Sustainability:</strong> {packagingExperience.sustainabilityNotes}</p>
+                    </Section>
+                )}
+            </div>
+
+            <div style={{ pageBreakBefore: 'always' }}>
+                {/* Financials */}
                 {financials && (
                     <Section title="Financial Projections">
                         <table className="w-full text-left border-collapse">
@@ -106,9 +178,24 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = ({
                         </table>
                     </Section>
                 )}
+
+                {/* Legal Checklist */}
+                {legalChecklist && (
+                    <Section title="Legal & Compliance Checklist">
+                        <p className="p-2 bg-yellow-100 border border-yellow-300 rounded mb-4"><strong>Disclaimer:</strong> {legalChecklist.disclaimer}</p>
+                        {legalChecklist.checklistItems.map((item, i) => (
+                            <div key={i} className="mb-2">
+                                <p><strong>{item.item} {item.isCritical ? '(Critical)' : ''}</strong></p>
+                                <p>{item.description}</p>
+                            </div>
+                        ))}
+                    </Section>
+                )}
+                
+                {/* Action Plan */}
                 {nextSteps && (
                     <Section title="Action Plan">
-                        <ul className="list-none space-y-2">{nextSteps.map((s, i) => (<li key={i} className="flex items-center"><span className="inline-block w-5 h-5 border-2 border-gray-800 mr-3">{s.completed ? '✔' : ''}</span>{s.text}</li>))}</ul>
+                        <ul className="list-none space-y-2">{nextSteps.map((s, i) => (<li key={i} className="flex items-center"><span className="inline-block w-5 h-5 border-2 border-gray-800 mr-3 text-center leading-tight">{s.completed ? '✔' : ''}</span>{s.text}</li>))}</ul>
                     </Section>
                 )}
             </div>

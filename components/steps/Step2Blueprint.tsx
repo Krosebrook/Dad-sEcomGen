@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { ProductPlan, ProductVariant, RegenerateableSection, BrandIdentityKit } from '../../types';
 import { generateLogo, regeneratePlanSection, generateProductPlan, generateBrandIdentity } from '../../services/geminiService';
@@ -43,6 +44,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
         description: false,
         variants: false,
         tags: false,
+        materials: false,
     });
     const [isGeneratingKit, setIsGeneratingKit] = useState<boolean>(false);
 

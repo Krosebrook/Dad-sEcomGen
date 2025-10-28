@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ProductPlan, ProductVariant, RegenerateableSection } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
@@ -67,7 +68,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   
   const [editingField, setEditingField] = useState<keyof ProductPlan | null>(null);
-  const [editedContent, setEditedContent] = useState<string>('');
+  const [editedContent, setEditedContent] = useState<string | number>('');
 
   useEffect(() => {
     setEditableVariants(plan.variants.map(v => ({...v})));
@@ -97,15 +98,29 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
     }
   };
 
-  const handleEditStart = (field: keyof ProductPlan, currentContent: string) => {
+  const handleEditStart = (field: keyof ProductPlan, currentContent: string | number | string[]) => {
     if (isLoading || isGeneratingLogo) return;
     setEditingField(field);
-    setEditedContent(currentContent);
+    if (Array.isArray(currentContent)) {
+        setEditedContent(currentContent.join(', '));
+    } else {
+        setEditedContent(currentContent);
+    }
   };
 
   const handleEditSave = () => {
     if (!editingField) return;
-    const updatedPlan = { ...plan, [editingField]: editedContent };
+    let finalContent: any = editedContent;
+
+    if (editingField === 'materials') {
+        finalContent = typeof editedContent === 'string' 
+            ? editedContent.split(',').map(s => s.trim()).filter(Boolean) 
+            : [];
+    } else if (editingField === 'weightGrams') {
+        finalContent = Number(editedContent) || 0;
+    }
+    
+    const updatedPlan = { ...plan, [editingField]: finalContent };
     onPlanChange(updatedPlan);
     setEditingField(null);
   };
@@ -281,6 +296,78 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
             <div className="text-sm text-slate-500 dark:text-slate-400">Currency</div>
             <div className="text-xl font-bold text-slate-900 dark:text-white">{plan.currency}</div>
           </div>
+        </div>
+
+        {/* Product Specifications Section */}
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Product Specifications</h3>
+            <div className="space-y-4">
+                {/* Materials */}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-slate-700 dark:text-slate-300">Materials</h4>
+                        <button onClick={() => onRegenerateSection('materials')} disabled={overallLoading} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50" aria-label="Regenerate materials">
+                            <ReloadIcon isSpinning={isRegenerating.materials} />
+                        </button>
+                        {editingField !== 'materials' && (
+                            <button className="group" onClick={() => handleEditStart('materials', plan.materials)} aria-label="Edit materials">
+                                <PencilIcon className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500" />
+                            </button>
+                        )}
+                    </div>
+                    {editingField === 'materials' ? (
+                        <div className="space-y-2">
+                            <Input value={editedContent} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., Cotton, Leather, Recycled Polyester" autoFocus />
+                            <div className="flex gap-2"><Button onClick={handleEditSave} size="sm">Save</Button><Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button></div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap gap-2">
+                            {(plan.materials || []).map((material, index) => (
+                                <span key={index} className="bg-slate-200 text-slate-800 text-sm font-medium px-3 py-1 rounded-full dark:bg-slate-700 dark:text-slate-300">{material}</span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {/* Dimensions & Weight */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-700 dark:text-slate-300">Dimensions</h4>
+                            {editingField !== 'dimensions' && (
+                                <button className="group" onClick={() => handleEditStart('dimensions', plan.dimensions)} aria-label="Edit dimensions">
+                                    <PencilIcon className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500" />
+                                </button>
+                            )}
+                        </div>
+                        {editingField === 'dimensions' ? (
+                            <div className="space-y-2">
+                                <Input value={editedContent} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., 15cm x 10cm x 5cm" autoFocus />
+                                <div className="flex gap-2"><Button onClick={handleEditSave} size="sm">Save</Button><Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button></div>
+                            </div>
+                        ) : (
+                            <p className="text-slate-600 dark:text-slate-400">{plan.dimensions || 'N/A'}</p>
+                        )}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-700 dark:text-slate-300">Weight</h4>
+                            {editingField !== 'weightGrams' && (
+                                <button className="group" onClick={() => handleEditStart('weightGrams', plan.weightGrams)} aria-label="Edit weight">
+                                    <PencilIcon className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500" />
+                                </button>
+                            )}
+                        </div>
+                        {editingField === 'weightGrams' ? (
+                            <div className="space-y-2">
+                                <Input type="number" value={editedContent} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., 500" autoFocus />
+                                <div className="flex gap-2"><Button onClick={handleEditSave} size="sm">Save</Button><Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button></div>
+                            </div>
+                        ) : (
+                            <p className="text-slate-600 dark:text-slate-400">{plan.weightGrams > 0 ? `${plan.weightGrams} g` : 'N/A'}</p>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
 
         {/* Variants Section */}

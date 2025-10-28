@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem } from '../types';
+import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import PdfExportTemplate from './PdfExportTemplate';
@@ -14,6 +13,11 @@ interface ExportControlsProps {
     marketingPlan: MarketingKickstart | null;
     financials: FinancialProjections | null;
     nextSteps: NextStepItem[] | null;
+    adCampaigns: AdCampaign[] | null;
+    influencerMarketingPlan: InfluencerMarketingPlan | null;
+    customerSupportPlaybook: CustomerSupportPlaybook | null;
+    packagingExperience: PackagingExperience | null;
+    legalChecklist: LegalChecklist | null;
 }
 
 const formatCurrency = (cents: number, currency: string = 'USD') => {
@@ -29,7 +33,7 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
     const [isExporting, setIsExporting] = useState(false);
 
     const generateMarkdown = () => {
-        const { productPlan, analysis, marketingPlan, financials, nextSteps } = props;
+        const { productPlan, analysis, marketingPlan, financials, nextSteps, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist } = props;
         let md = `# ${productPlan.productTitle}\n\n`;
 
         // Product Plan
@@ -38,6 +42,12 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
         md += `| Price | SKU | Stock | Currency |\n`;
         md += `|---|---|---|---|\n`;
         md += `| ${formatCurrency(productPlan.priceCents, productPlan.currency)} | ${productPlan.sku} | ${productPlan.stock} | ${productPlan.currency} |\n\n`;
+        
+        md += `### Product Specifications\n`;
+        md += `- **Materials:** ${productPlan.materials.join(', ')}\n`;
+        md += `- **Dimensions:** ${productPlan.dimensions}\n`;
+        md += `- **Weight:** ${productPlan.weightGrams}g\n\n`;
+
         if (productPlan.variants.length > 0) {
             md += `**Variants:**\n`;
             md += `| Title | SKU | Price | Stock |\n`;
@@ -79,6 +89,36 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `### Launch Email\n`;
             md += `**Subject:** ${marketingPlan.launchEmail.subject}\n**Body:**\n${marketingPlan.launchEmail.body}\n\n`;
         }
+
+        // Ad Campaigns
+        if (adCampaigns) {
+            md += `## Ad Campaign Strategy\n\n`;
+            adCampaigns.forEach(c => {
+                md += `### ${c.platform} - ${c.campaignName}\n`;
+                md += `**Objective:** ${c.objective}\n\n`;
+                c.adSets.forEach(as => {
+                    md += `#### Ad Set: ${as.adSetName}\n`;
+                    md += `- **Targeting:** ${as.targetingSummary}\n`;
+                    md += `- **Daily Budget:** ${formatCurrency(as.dailyBudgetCents)}\n`;
+                    md += `- **Creative Notes:**\n`;
+                    as.adCreativeNotes.forEach(note => (md += `  - ${note}\n`));
+                });
+                md += `\n`;
+            });
+        }
+
+        // Influencer Marketing
+        if (influencerMarketingPlan) {
+            md += `## Influencer Marketing Plan\n\n`;
+            md += `**Target Tiers:** ${influencerMarketingPlan.influencerTiers.join(', ')}\n`;
+            md += `**KPIs to Track:** ${influencerMarketingPlan.kpiToTrack.join(', ')}\n\n`;
+            md += `### Outreach Template\n\`\`\`\n${influencerMarketingPlan.outreachTemplate}\n\`\`\`\n\n`;
+            md += `### Campaign Ideas\n`;
+            influencerMarketingPlan.campaignIdeas.forEach(idea => {
+                md += `- **${idea.ideaName}:** ${idea.description}\n`;
+            });
+            md += `\n`;
+        }
         
         // Financials
         if (financials) {
@@ -92,6 +132,41 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `| Monthly Fixed Costs | ${formatCurrency(financials.monthlyFixedCostsCents || 0, productPlan.currency)} |\n`;
             md += `| Monthly Sales | ${financials.estimatedMonthlySales} units |\n`;
             md += `| Marketing Budget | ${formatCurrency(financials.monthlyMarketingBudgetCents, productPlan.currency)} |\n\n`;
+        }
+
+        // Customer Support
+        if (customerSupportPlaybook) {
+            md += `## Customer Support Playbook\n\n`;
+            md += `**Tone of Voice:** ${customerSupportPlaybook.toneOfVoice}\n`;
+            md += `**Return Policy Summary:** ${customerSupportPlaybook.returnPolicySummary}\n\n`;
+            md += `### FAQs\n`;
+            customerSupportPlaybook.faq.forEach(f => {
+                md += `**Q: ${f.question}**\nA: ${f.answer}\n\n`;
+            });
+            md += `### Sample Responses\n`;
+            customerSupportPlaybook.sampleResponses.forEach(r => {
+                md += `**Scenario: ${r.scenario}**\n> ${r.response}\n\n`;
+            });
+        }
+
+        // Packaging
+        if (packagingExperience) {
+            md += `## Packaging & Unboxing Experience\n\n`;
+            md += `**Theme:** ${packagingExperience.theme}\n`;
+            md += `**Box:** ${packagingExperience.boxDescription}\n`;
+            md += `**Inside Elements:**\n`;
+            packagingExperience.insideBoxElements.forEach(el => (md += `- ${el}\n`));
+            md += `\n**Sustainability:** ${packagingExperience.sustainabilityNotes}\n\n`;
+        }
+
+        // Legal
+        if (legalChecklist) {
+            md += `## Legal & Compliance Checklist\n\n`;
+            md += `> **Disclaimer:** ${legalChecklist.disclaimer}\n\n`;
+            legalChecklist.checklistItems.forEach(item => {
+                md += `### ${item.item} ${item.isCritical ? '(Critical)' : ''}\n`;
+                md += `${item.description}\n\n`;
+            });
         }
 
         // Next Steps
@@ -127,19 +202,22 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
                 const canvasWidth = canvas.width;
                 const canvasHeight = canvas.height;
                 const ratio = canvasWidth / canvasHeight;
-                const height = pdfWidth / ratio;
-                let position = 0;
-                let remainingHeight = canvasHeight * (pdfWidth / canvasWidth);
+                let totalPDFPages = Math.ceil(canvasHeight * (pdfWidth / canvasWidth) / pdfHeight);
+                let pageCanvas = document.createElement('canvas');
+                let pageCtx = pageCanvas.getContext('2d');
+                pageCanvas.width = canvasWidth;
+                pageCanvas.height = (pdfHeight / pdfWidth) * canvasWidth;
 
-                while (remainingHeight > 0) {
-                    pdf.addImage(imgData, 'PNG', 0, -position, pdfWidth, canvasHeight * (pdfWidth/canvasWidth));
-                    remainingHeight -= pdfHeight;
-                    position += pdfHeight;
-                    if (remainingHeight > 0) {
+                for (let i = 0; i < totalPDFPages; i++) {
+                    let sourceY = i * pageCanvas.height;
+                    pageCtx?.drawImage(canvas, 0, sourceY, canvasWidth, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
+                    let pageImgData = pageCanvas.toDataURL('image/png');
+                    if (i > 0) {
                         pdf.addPage();
                     }
+                    pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                 }
-                
+
                 pdf.save(`${props.productPlan.slug}.pdf`);
                 setIsExporting(false);
             }).catch(err => {
@@ -166,7 +244,7 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
                 </CardContent>
             </Card>
             <div className="hidden">
-                 <div id="pdf-export-template">
+                 <div id="pdf-export-template" style={{ position: 'absolute', left: '-9999px', top: 0 }}>
                     <PdfExportTemplate {...props} />
                 </div>
             </div>

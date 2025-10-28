@@ -17,6 +17,11 @@ import {
     ContentStrategy,
     GroundingSource,
     LaunchEmail,
+    AdCampaign,
+    InfluencerMarketingPlan,
+    CustomerSupportPlaybook,
+    PackagingExperience,
+    LegalChecklist
 } from '../types';
 
 // FIX: Initialize the GoogleGenAI client.
@@ -78,6 +83,9 @@ const productPlanSchema = {
         stock: { type: Type.INTEGER },
         variants: { type: Type.ARRAY, items: productVariantSchema },
         tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+        materials: { type: Type.ARRAY, items: { type: Type.STRING } },
+        dimensions: { type: Type.STRING },
+        weightGrams: { type: Type.INTEGER },
     },
 };
 
@@ -106,7 +114,7 @@ export async function generateProductPlan(productIdea: string, brandVoice: strin
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are an e-commerce expert creating a detailed product plan. The brand voice is "${brandVoice}". Your entire response must be a single JSON object matching the provided schema, and nothing else.`;
     
-    let prompt = `Create a comprehensive product plan for: "${productIdea}". Include a compelling product title, slug, a detailed description (including target audience), a base price in cents (USD), a base SKU, total stock, at least 3 relevant product variants, and marketing tags.`;
+    let prompt = `Create a comprehensive product plan for: "${productIdea}". Include a compelling product title, slug, a detailed description (including target audience), a base price in cents (USD), a base SKU, total stock, at least 3 relevant product variants, marketing tags, a list of primary materials, product dimensions (e.g., "15cm x 10cm x 5cm"), and weight in grams.`;
     if (existingVariants.length > 0) {
         prompt += `\n\nThe user has updated the variants. Please regenerate the plan based on these new variants, updating the total stock and average price accordingly: ${JSON.stringify(existingVariants)}`;
     }
@@ -176,6 +184,9 @@ export async function regeneratePlanSection(productIdea: string, currentPlan: Pr
             break;
         case 'tags':
             responseSchema = { type: Type.OBJECT, properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING }}}};
+            break;
+        case 'materials':
+            responseSchema = { type: Type.OBJECT, properties: { materials: { type: Type.ARRAY, items: { type: Type.STRING }}}};
             break;
     }
 
@@ -346,10 +357,20 @@ export async function generatePersonaAvatar(prompt: string): Promise<string> {
     return `data:image/png;base64,${base64ImageBytes}`;
 }
 
-export async function generateMarketingPlan(plan: ProductPlan, brandVoice: string): Promise<MarketingKickstart> {
+export async function generateMarketingPlan(plan: ProductPlan, brandVoice: string, customerPersona: CustomerPersona): Promise<MarketingKickstart> {
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a digital marketing specialist with a ${brandVoice} tone. Your response must be a JSON object.`;
-    const prompt = `Create a marketing kickstart plan for "${plan.productTitle}". Description: "${plan.description}". Generate 2 social media posts (one for Instagram, one for Facebook), ad copy for Google Ads (3 headlines, 2 descriptions), and a product launch email (subject and body). The email should be engaging and include a special launch offer.`;
+    const prompt = `Create a marketing kickstart plan for "${plan.productTitle}".
+Description: "${plan.description}".
+The target customer persona is:
+- Name: ${customerPersona.name}, Age: ${customerPersona.age}, Occupation: ${customerPersona.occupation}
+- Motivations: ${customerPersona.motivations.join(', ')}
+- Goals: ${customerPersona.goals.join(', ')}
+- Pain Points: ${customerPersona.painPoints.join(', ')}
+
+Generate 3 distinct social media posts for the product launch, tailored for platforms like Instagram, Facebook, and X (formerly Twitter). Each post should include engaging text, relevant hashtags, and a creative visual prompt.
+Also, generate ad copy for Google Ads (3 headlines, 2 descriptions) with detailed audience targeting suggestions (demographics, interests, keywords) based on the customer persona.
+Finally, create a product launch email.`;
     
     const response = await ai.models.generateContent({
         model,
@@ -381,8 +402,17 @@ export async function generateMarketingPlan(plan: ProductPlan, brandVoice: strin
                                 platform: { type: Type.STRING },
                                 headlines: { type: Type.ARRAY, items: { type: Type.STRING }},
                                 descriptions: { type: Type.ARRAY, items: { type: Type.STRING }},
+                                audienceTargeting: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        demographics: { type: Type.ARRAY, items: { type: Type.STRING }, description: "e.g., Age: 25-35, Location: Urban areas" },
+                                        interests: { type: Type.ARRAY, items: { type: Type.STRING }, description: "e.g., 'Tech gadgets', 'Productivity hacks', 'Parenting blogs'" },
+                                        keywords: { type: Type.ARRAY, items: { type: Type.STRING }, description: "e.g., 'best backpack for dads', 'tech-friendly work bag'" },
+                                    },
+                                    required: ['demographics', 'interests', 'keywords'],
+                                }
                             },
-                             required: ['platform', 'headlines', 'descriptions'],
+                             required: ['platform', 'headlines', 'descriptions', 'audienceTargeting'],
                         }
                     },
                     launchEmail: {
@@ -603,4 +633,214 @@ export async function generateBlogPost(title: string, plan: ProductPlan, brandVo
     });
     
     return response.text;
+}
+
+export async function generateAdCampaigns(plan: ProductPlan, persona: CustomerPersona, marketingPlan: MarketingKickstart): Promise<AdCampaign[]> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a digital advertising strategist. Your response must be a JSON array of AdCampaign objects.`;
+    const prompt = `Based on the product "${plan.productTitle}", the customer persona "${persona.name}", and the initial ad copy, create a structured ad campaign plan. Generate one campaign for Facebook Ads and one for Google Ads.
+    For each campaign:
+    - Define a clear objective (e.g., 'Brand Awareness', 'Conversions').
+    - Create two distinct ad sets with different targeting approaches based on the persona.
+    - For each ad set, provide a targeting summary, a suggested daily budget in cents (USD), and 2-3 creative notes that build on the existing ad copy.
+    Initial Ad Copy for context: ${JSON.stringify(marketingPlan.adCopy)}`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        platform: { type: Type.STRING },
+                        campaignName: { type: Type.STRING },
+                        objective: { type: Type.STRING },
+                        adSets: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    adSetName: { type: Type.STRING },
+                                    targetingSummary: { type: Type.STRING },
+                                    dailyBudgetCents: { type: Type.INTEGER },
+                                    adCreativeNotes: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<AdCampaign[]>(response.text);
+    if (!parsed) throw new Error("Failed to generate ad campaigns");
+    return parsed;
+}
+
+export async function generateInfluencerPlan(plan: ProductPlan, persona: CustomerPersona, brandVoice: string): Promise<InfluencerMarketingPlan> {
+    const model = 'gemini-2.5-flash';
+    const systemInstruction = `You are an influencer marketing expert with a ${brandVoice} tone. Your response must be a single JSON object.`;
+    const prompt = `Create an influencer marketing plan for "${plan.productTitle}" targeting the persona "${persona.name}".
+    - Suggest which influencer tiers to target (e.g., Nano, Micro).
+    - Write a friendly, concise outreach email template.
+    - Propose 2 creative campaign ideas (e.g., unboxing, 'day in the life').
+    - List 3-4 key KPIs to track for success.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    influencerTiers: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    outreachTemplate: { type: Type.STRING },
+                    campaignIdeas: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                ideaName: { type: Type.STRING },
+                                description: { type: Type.STRING },
+                            },
+                        },
+                    },
+                    kpiToTrack: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<InfluencerMarketingPlan>(response.text);
+    if (!parsed) throw new Error("Failed to generate influencer plan");
+    return parsed;
+}
+
+export async function generateCustomerSupportPlaybook(plan: ProductPlan, brandVoice: string): Promise<CustomerSupportPlaybook> {
+    const model = 'gemini-2.5-flash';
+    const systemInstruction = `You are a customer experience manager with a ${brandVoice} tone. Your response must be a single JSON object.`;
+    const prompt = `Create a customer support playbook for the product "${plan.productTitle}".
+    - Define the support tone of voice.
+    - Write a customer-friendly return policy summary (3-4 sentences).
+    - Generate 4 common FAQs with answers.
+    - Provide sample responses for two scenarios: 'Order has not arrived' and 'Customer is unhappy with the product'.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    faq: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                question: { type: Type.STRING },
+                                answer: { type: Type.STRING },
+                            },
+                        },
+                    },
+                    returnPolicySummary: { type: Type.STRING },
+                    toneOfVoice: { type: Type.STRING },
+                    sampleResponses: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                scenario: { type: Type.STRING },
+                                response: { type: Type.STRING },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<CustomerSupportPlaybook>(response.text);
+    if (!parsed) throw new Error("Failed to generate customer support playbook");
+    return parsed;
+}
+
+export async function generatePackagingExperience(plan: ProductPlan, brandVoice: string): Promise<PackagingExperience> {
+    const model = 'gemini-2.5-flash';
+    const systemInstruction = `You are a branding and packaging designer with a ${brandVoice} tone. Your response must be a single JSON object.`;
+    const prompt = `Design a memorable packaging and unboxing experience for "${plan.productTitle}".
+    - Suggest a creative theme.
+    - Describe the shipping box (material, color, branding).
+    - List 3-4 key elements to include inside the box (e.g., branded tissue paper, a thank you card with a dad joke, a sticker).
+    - Add a brief note on potential sustainability improvements.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    theme: { type: Type.STRING },
+                    boxDescription: { type: Type.STRING },
+                    insideBoxElements: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    sustainabilityNotes: { type: Type.STRING },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<PackagingExperience>(response.text);
+    if (!parsed) throw new Error("Failed to generate packaging experience plan");
+    return parsed;
+}
+
+export async function generateLegalChecklist(plan: ProductPlan): Promise<LegalChecklist> {
+    const model = 'gemini-2.5-flash';
+    const systemInstruction = `You are a helpful AI assistant providing a general information checklist for e-commerce. Your response must be a single JSON object.`;
+    const prompt = `For a new e-commerce business selling a product like "${plan.productTitle}", generate a general legal and compliance checklist.
+    - Include a clear disclaimer that this is for informational purposes only and not legal advice.
+    - List 5-7 key checklist items (e.g., Business Registration, Privacy Policy, Terms of Service, Cookie Consent).
+    - For each item, provide a brief description of what it is.
+    - Mark items that are generally considered critical as true.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    disclaimer: { type: Type.STRING },
+                    checklistItems: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                item: { type: Type.STRING },
+                                description: { type: Type.STRING },
+                                isCritical: { type: Type.BOOLEAN },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<LegalChecklist>(response.text);
+    if (!parsed) throw new Error("Failed to generate legal checklist");
+    return parsed;
 }

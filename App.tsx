@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -28,6 +27,11 @@ import {
     ShopifyIntegration,
     SupplierQuote,
     PriceHistoryPoint,
+    AdCampaign,
+    InfluencerMarketingPlan,
+    CustomerSupportPlaybook,
+    PackagingExperience,
+    LegalChecklist,
 } from './types';
 
 const App: React.FC = () => {
@@ -57,6 +61,11 @@ const App: React.FC = () => {
     const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
     const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuote[]>([]);
     const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
+    const [adCampaigns, setAdCampaigns] = useState<AdCampaign[] | null>(null);
+    const [influencerMarketingPlan, setInfluencerMarketingPlan] = useState<InfluencerMarketingPlan | null>(null);
+    const [customerSupportPlaybook, setCustomerSupportPlaybook] = useState<CustomerSupportPlaybook | null>(null);
+    const [packagingExperience, setPackagingExperience] = useState<PackagingExperience | null>(null);
+    const [legalChecklist, setLegalChecklist] = useState<LegalChecklist | null>(null);
 
 
     const [isPlanSaved, setIsPlanSaved] = useState(false);
@@ -96,6 +105,11 @@ const App: React.FC = () => {
         setShopifyIntegration(null);
         setSupplierQuotes([]);
         setPriceHistory([]);
+        setAdCampaigns(null);
+        setInfluencerMarketingPlan(null);
+        setCustomerSupportPlaybook(null);
+        setPackagingExperience(null);
+        setLegalChecklist(null);
     };
     
     const onPlanModified = useCallback(() => {
@@ -179,7 +193,11 @@ const App: React.FC = () => {
             productIdea, brandVoice, smartGoals, plan, logoImageUrl, brandKit,
             analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan,
             financials, nextSteps, chatHistory, storefrontMockupUrl, contentStrategy,
-            shopifyIntegration, supplierQuotes, priceHistory
+            shopifyIntegration, supplierQuotes, priceHistory, adCampaigns: adCampaigns ?? undefined,
+            influencerMarketingPlan: influencerMarketingPlan ?? undefined,
+            customerSupportPlaybook: customerSupportPlaybook ?? undefined,
+            packagingExperience: packagingExperience ?? undefined,
+            legalChecklist: legalChecklist ?? undefined
         };
 
         const newVenture: SavedVenture = {
@@ -204,14 +222,30 @@ const App: React.FC = () => {
             setProductIdea(data.productIdea);
             setBrandVoice(data.brandVoice);
             setSmartGoals(data.smartGoals);
-            setPlan(data.plan);
+
+            const loadedPlan = data.plan;
+            if (loadedPlan) {
+                loadedPlan.materials = loadedPlan.materials ?? [];
+                loadedPlan.dimensions = loadedPlan.dimensions ?? '';
+                loadedPlan.weightGrams = loadedPlan.weightGrams ?? 0;
+            }
+            setPlan(loadedPlan);
+            
             setLogoImageUrl(data.logoImageUrl);
             setBrandKit(data.brandKit);
             setAnalysis(data.analysis);
             setSwotAnalysis(data.swotAnalysis);
             setCustomerPersona(data.customerPersona);
             setPersonaAvatarUrl(data.personaAvatarUrl);
-            setMarketingPlan(data.marketingPlan);
+
+            const marketingData = data.marketingPlan;
+            if (marketingData && marketingData.adCopy) {
+                marketingData.adCopy = marketingData.adCopy.map(ad => ({
+                    ...ad,
+                    audienceTargeting: ad.audienceTargeting ?? { demographics: [], interests: [], keywords: [] }
+                }));
+            }
+            setMarketingPlan(marketingData);
             
             const financialData = data.financials;
             if (financialData) {
@@ -228,6 +262,12 @@ const App: React.FC = () => {
             setShopifyIntegration(data.shopifyIntegration || null);
             setSupplierQuotes(data.supplierQuotes || []);
             setPriceHistory(data.priceHistory || []);
+            setAdCampaigns(data.adCampaigns || null);
+            setInfluencerMarketingPlan(data.influencerMarketingPlan || null);
+            setCustomerSupportPlaybook(data.customerSupportPlaybook || null);
+            setPackagingExperience(data.packagingExperience || null);
+            setLegalChecklist(data.legalChecklist || null);
+
             
             setIsPlanSaved(true);
             setCurrentStep(2); // Go to blueprint step after loading
@@ -338,6 +378,16 @@ const App: React.FC = () => {
                         setShopifyIntegration={setShopifyIntegration}
                         supplierQuotes={supplierQuotes}
                         setSupplierQuotes={setSupplierQuotes}
+                        adCampaigns={adCampaigns}
+                        setAdCampaigns={setAdCampaigns}
+                        influencerMarketingPlan={influencerMarketingPlan}
+                        setInfluencerMarketingPlan={setInfluencerMarketingPlan}
+                        customerSupportPlaybook={customerSupportPlaybook}
+                        setCustomerSupportPlaybook={setCustomerSupportPlaybook}
+                        packagingExperience={packagingExperience}
+                        setPackagingExperience={setPackagingExperience}
+                        legalChecklist={legalChecklist}
+                        setLegalChecklist={setLegalChecklist}
                         onPlanModified={onPlanModified}
                         onBack={() => setCurrentStep(3)}
                     />

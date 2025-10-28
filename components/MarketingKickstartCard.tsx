@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { MarketingKickstart, ProductPlan } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
@@ -25,6 +26,11 @@ const ReloadIcon: React.FC<{ className?: string, isSpinning?: boolean }> = ({ cl
     <path d="M3 21v-5h5"/>
   </svg>
 );
+
+const TargetingIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const TagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>;
+const KeyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>;
 
 
 const useCopyToClipboard = (): [(text: string, id: string) => void, string | null] => {
@@ -122,6 +128,34 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
                     ))}
                   </ul>
                 </div>
+                {ad.audienceTargeting && (
+                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <h5 className="font-semibold mb-3 text-slate-800 dark:text-slate-200 flex items-center gap-2"><TargetingIcon /> Audience Targeting</h5>
+                        <div className="space-y-2 text-sm pl-2">
+                            <div className="flex items-start gap-2">
+                                <UsersIcon className="mt-1 flex-shrink-0 text-slate-500"/>
+                                <div>
+                                    <strong className="text-slate-700 dark:text-slate-300">Demographics:</strong>
+                                    <p className="text-slate-600 dark:text-slate-400">{ad.audienceTargeting.demographics.join(', ')}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <TagIcon className="mt-1 flex-shrink-0 text-slate-500"/>
+                                <div>
+                                    <strong className="text-slate-700 dark:text-slate-300">Interests:</strong>
+                                    <p className="text-slate-600 dark:text-slate-400">{ad.audienceTargeting.interests.join(', ')}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <KeyIcon className="mt-1 flex-shrink-0 text-slate-500"/>
+                                <div>
+                                    <strong className="text-slate-700 dark:text-slate-300">Keywords:</strong>
+                                    <p className="text-slate-600 dark:text-slate-400">{ad.audienceTargeting.keywords.join(', ')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
               </div>
             ))}
           </div>
