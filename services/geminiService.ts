@@ -13,10 +13,10 @@ import {
     FinancialProjections,
     FinancialScenario,
     NextStepItem,
-    ChatMessage,
     ProductScoutResult,
     ContentStrategy,
     GroundingSource,
+    LaunchEmail,
 } from '../types';
 
 // FIX: Initialize the GoogleGenAI client.
@@ -349,7 +349,7 @@ export async function generatePersonaAvatar(prompt: string): Promise<string> {
 export async function generateMarketingPlan(plan: ProductPlan, brandVoice: string): Promise<MarketingKickstart> {
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a digital marketing specialist with a ${brandVoice} tone. Your response must be a JSON object.`;
-    const prompt = `Create a marketing kickstart plan for "${plan.productTitle}". Description: "${plan.description}". Generate 2 social media posts (one for Instagram, one for Facebook), ad copy for Google Ads (3 headlines, 2 descriptions), and a product launch email (subject and body).`;
+    const prompt = `Create a marketing kickstart plan for "${plan.productTitle}". Description: "${plan.description}". Generate 2 social media posts (one for Instagram, one for Facebook), ad copy for Google Ads (3 headlines, 2 descriptions), and a product launch email (subject and body). The email should be engaging and include a special launch offer.`;
     
     const response = await ai.models.generateContent({
         model,
@@ -369,7 +369,8 @@ export async function generateMarketingPlan(plan: ProductPlan, brandVoice: strin
                                 postText: { type: Type.STRING },
                                 hashtags: { type: Type.ARRAY, items: { type: Type.STRING }},
                                 visualPrompt: { type: Type.STRING },
-                            }
+                            },
+                             required: ['platform', 'postText', 'hashtags', 'visualPrompt'],
                         }
                     },
                     adCopy: {
@@ -380,7 +381,8 @@ export async function generateMarketingPlan(plan: ProductPlan, brandVoice: strin
                                 platform: { type: Type.STRING },
                                 headlines: { type: Type.ARRAY, items: { type: Type.STRING }},
                                 descriptions: { type: Type.ARRAY, items: { type: Type.STRING }},
-                            }
+                            },
+                             required: ['platform', 'headlines', 'descriptions'],
                         }
                     },
                     launchEmail: {
@@ -388,9 +390,11 @@ export async function generateMarketingPlan(plan: ProductPlan, brandVoice: strin
                         properties: {
                             subject: { type: Type.STRING },
                             body: { type: Type.STRING },
-                        }
+                        },
+                         required: ['subject', 'body'],
                     }
-                }
+                },
+                required: ['socialMediaPosts', 'adCopy', 'launchEmail'],
             }
         }
     });
@@ -400,10 +404,42 @@ export async function generateMarketingPlan(plan: ProductPlan, brandVoice: strin
     return parsed;
 }
 
+export async function regenerateLaunchEmail(plan: ProductPlan, brandVoice: string): Promise<LaunchEmail> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are an expert email marketer with a ${brandVoice} tone. Your response must be a single JSON object with 'subject' and 'body' keys.`;
+    const prompt = `Compose a new, engaging launch email for the product "${plan.productTitle}".
+    Product Description for context: "${plan.description}".
+    The email must clearly state the product's key benefits and create excitement for the launch.
+    Crucially, invent a compelling and specific launch day offer (e.g., a 20% discount code like LAUNCH20, free shipping for the first 24 hours, or a small bonus gift for the first 100 orders).
+    Generate a catchy, high-conversion subject line and a full email body.`;
+    
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    subject: { type: Type.STRING },
+                    body: { type: Type.STRING },
+                },
+                required: ['subject', 'body']
+            }
+        }
+    });
+
+    const parsed = parseJson<LaunchEmail>(response.text);
+    if (!parsed) throw new Error("Failed to generate launch email");
+    return parsed;
+}
+
+
 export async function generateFinancialProjections(plan: ProductPlan, scenario: FinancialScenario): Promise<FinancialProjections> {
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a financial analyst for e-commerce startups. Provide a JSON response based on the scenario.`;
-    const prompt = `Generate ${scenario} financial projections for "${plan.productTitle}" which sells for ${plan.priceCents / 100} USD. Estimate the cost of goods sold (COGS) per unit, estimated monthly sales in units, and a suitable monthly marketing budget. Provide all monetary values in cents.`;
+    const prompt = `Generate ${scenario} financial projections for "${plan.productTitle}" which sells for ${plan.priceCents / 100} USD. Estimate the cost of goods sold (COGS) per unit, estimated monthly sales in units, a suitable monthly marketing budget, an estimated shipping cost per unit, a standard transaction fee percentage (e.g., 2.9 for credit cards), and any other typical monthly fixed costs (like platform fees). Provide all monetary values in cents.`;
     
      const response = await ai.models.generateContent({
         model,
@@ -417,6 +453,9 @@ export async function generateFinancialProjections(plan: ProductPlan, scenario: 
                     costOfGoodsSoldCents: { type: Type.INTEGER },
                     estimatedMonthlySales: { type: Type.INTEGER },
                     monthlyMarketingBudgetCents: { type: Type.INTEGER },
+                    shippingCostPerUnitCents: { type: Type.INTEGER },
+                    transactionFeePercent: { type: Type.NUMBER },
+                    monthlyFixedCostsCents: { type: Type.INTEGER },
                 }
             }
         }
@@ -459,32 +498,6 @@ export async function generateNextSteps(plan: ProductPlan, brandVoice: string): 
     const parsed = parseJson<NextStepItem[]>(response.text);
     if (!parsed) throw new Error("Failed to generate next steps");
     return parsed;
-}
-
-export async function continueChat(plan: ProductPlan, history: ChatMessage[], brandVoice: string): Promise<string> {
-    const model = 'gemini-2.5-flash';
-    const systemInstruction = `You are an AI business consultant with a ${brandVoice} tone. The user is asking questions about their product plan. Keep your answers concise and helpful.
-    Product Context:
-    - Title: ${plan.productTitle}
-    - Description: ${plan.description}
-    - Price: ${(plan.priceCents / 100).toFixed(2)} ${plan.currency}
-    `;
-    
-    // Format history for the model
-    const contents = history.map(h => ({
-        role: h.role,
-        parts: [{ text: h.content }],
-    }));
-
-    // This is not a chat model, so we send the whole history as a single prompt
-    const singlePrompt = `${systemInstruction}\n\nCHAT HISTORY:\n${history.map(m => `${m.role}: ${m.content}`).join('\n')}\n\nmodel:`;
-    
-    const response = await ai.models.generateContent({
-        model,
-        contents: singlePrompt
-    });
-
-    return response.text;
 }
 
 export async function scoutTrendingProducts(category: string): Promise<ProductScoutResult[]> {

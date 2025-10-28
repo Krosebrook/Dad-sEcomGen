@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem } from '../types';
 
@@ -96,6 +97,9 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = ({
                             <tbody>
                                 <tr><td className="p-2 border">Selling Price</td><td className="p-2 border">{formatCurrency(financials.sellingPriceCents, productPlan.currency)}</td></tr>
                                 <tr><td className="p-2 border">Cost of Goods Sold (per unit)</td><td className="p-2 border">{formatCurrency(financials.costOfGoodsSoldCents, productPlan.currency)}</td></tr>
+                                <tr><td className="p-2 border">Shipping Cost (per unit)</td><td className="p-2 border">{formatCurrency(financials.shippingCostPerUnitCents || 0, productPlan.currency)}</td></tr>
+                                <tr><td className="p-2 border">Transaction Fee</td><td className="p-2 border">{financials.transactionFeePercent || 0}%</td></tr>
+                                <tr><td className="p-2 border">Monthly Fixed Costs</td><td className="p-2 border">{formatCurrency(financials.monthlyFixedCostsCents || 0, productPlan.currency)}</td></tr>
                                 <tr><td className="p-2 border">Estimated Monthly Sales</td><td className="p-2 border">{financials.estimatedMonthlySales} units</td></tr>
                                 <tr><td className="p-2 border">Monthly Marketing Budget</td><td className="p-2 border">{formatCurrency(financials.monthlyMarketingBudgetCents, productPlan.currency)}</td></tr>
                             </tbody>

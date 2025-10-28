@@ -180,7 +180,17 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
 
     return (
         <div className="w-full max-w-4xl space-y-8 animate-fade-in">
-            {marketingPlan && <MarketingKickstartCard marketingPlan={marketingPlan} />}
+            {marketingPlan && (
+                <MarketingKickstartCard
+                    marketingPlan={marketingPlan}
+                    productPlan={productPlan}
+                    brandVoice={brandVoice}
+                    onUpdate={(newPlan) => {
+                        setMarketingPlan(newPlan);
+                        onPlanModified();
+                    }}
+                />
+            )}
             {financials && <FinancialProjectionsCard financials={financials} onFinancialsChange={(f) => { setFinancials(f); onPlanModified(); }} currency={productPlan.currency} onScenarioChange={handleScenarioChange} isRegenerating={isRegeneratingFinancials} />}
             {customerPersona && <ContentStrategyCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} contentStrategy={contentStrategy} setContentStrategy={setContentStrategy} onPlanModified={onPlanModified} />}
             <StorefrontMockupCard onGenerate={handleGenerateMockup} isGenerating={isGeneratingMockup} mockupUrl={storefrontMockupUrl} />

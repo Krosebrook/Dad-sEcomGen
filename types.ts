@@ -1,3 +1,4 @@
+
 export interface ProductVariant {
   title: string;
   sku: string;
@@ -71,6 +72,9 @@ export interface FinancialProjections {
   costOfGoodsSoldCents: number;
   estimatedMonthlySales: number;
   monthlyMarketingBudgetCents: number;
+  shippingCostPerUnitCents: number;
+  transactionFeePercent: number;
+  monthlyFixedCostsCents: number;
 }
 
 export interface SMARTGoalDetail {

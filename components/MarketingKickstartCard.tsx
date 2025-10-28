@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { MarketingKickstart } from '../types';
+import { MarketingKickstart, ProductPlan } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
+import { Button } from './ui/Button';
+import { regenerateLaunchEmail } from '../services/geminiService';
 
 const ClipboardIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -15,6 +17,16 @@ const CheckIcon = () => (
   </svg>
 );
 
+const ReloadIcon: React.FC<{ className?: string, isSpinning?: boolean }> = ({ className, isSpinning }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} ${isSpinning ? 'animate-spin' : ''}`}>
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+    <path d="M21 3v5h-5"/>
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+    <path d="M3 21v-5h5"/>
+  </svg>
+);
+
+
 const useCopyToClipboard = (): [(text: string, id: string) => void, string | null] => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const copy = useCallback((text: string, id: string) => {
@@ -28,11 +40,29 @@ const useCopyToClipboard = (): [(text: string, id: string) => void, string | nul
 
 interface MarketingKickstartCardProps {
   marketingPlan: MarketingKickstart;
+  productPlan: ProductPlan;
+  brandVoice: string;
+  onUpdate: (updatedPlan: MarketingKickstart) => void;
 }
 
-const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketingPlan }) => {
+const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketingPlan, productPlan, brandVoice, onUpdate }) => {
   const [copy, copiedId] = useCopyToClipboard();
+  const [isRegeneratingEmail, setIsRegeneratingEmail] = useState(false);
   const { socialMediaPosts, adCopy, launchEmail } = marketingPlan;
+
+  const handleRegenerateEmail = async () => {
+    setIsRegeneratingEmail(true);
+    try {
+        const newEmail = await regenerateLaunchEmail(productPlan, brandVoice);
+        onUpdate({ ...marketingPlan, launchEmail: newEmail });
+    } catch (e) {
+        console.error(e);
+        // TODO: show error in UI
+    } finally {
+        setIsRegeneratingEmail(false);
+    }
+  };
+
 
   return (
     <Card className="w-full animate-fade-in text-left">
@@ -99,7 +129,13 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
 
         {/* Launch Email Section */}
         <section>
-          <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200">Launch Email</h3>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200">Launch Email</h3>
+                <Button variant="outline" size="sm" onClick={handleRegenerateEmail} disabled={isRegeneratingEmail}>
+                    <ReloadIcon isSpinning={isRegeneratingEmail} className="mr-2" />
+                    {isRegeneratingEmail ? 'Regenerating...' : 'Regenerate Email'}
+                </Button>
+            </div>
           <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
             <div className="flex justify-between items-start mb-2">
                 <div>

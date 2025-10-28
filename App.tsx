@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -211,7 +212,15 @@ const App: React.FC = () => {
             setCustomerPersona(data.customerPersona);
             setPersonaAvatarUrl(data.personaAvatarUrl);
             setMarketingPlan(data.marketingPlan);
-            setFinancials(data.financials);
+            
+            const financialData = data.financials;
+            if (financialData) {
+                financialData.shippingCostPerUnitCents = financialData.shippingCostPerUnitCents ?? 0;
+                financialData.transactionFeePercent = financialData.transactionFeePercent ?? 2.9;
+                financialData.monthlyFixedCostsCents = financialData.monthlyFixedCostsCents ?? 0;
+            }
+            setFinancials(financialData);
+
             setNextSteps(data.nextSteps);
             setChatHistory(data.chatHistory || []);
             setStorefrontMockupUrl(data.storefrontMockupUrl || null);

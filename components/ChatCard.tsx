@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { GoogleGenAI, Chat } from '@google/genai';
 import { ProductPlan, ChatMessage } from '../types';
-import { continueChat } from '../services/geminiService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
+
+// Initialize the AI client once.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 interface ChatCardProps {
   productPlan: ProductPlan;
@@ -20,6 +23,25 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatRef = useRef<Chat | null>(null);
+
+    // Effect to initialize or reset the chat session when the product plan or brand voice changes.
+    // This also handles loading history from a saved venture.
+    useEffect(() => {
+        const systemInstruction = `You are an AI business consultant with a ${brandVoice} tone. The user is asking questions about their product plan. Keep your answers concise and helpful.
+    Product Context:
+    - Title: ${productPlan.productTitle}
+    - Description: ${productPlan.description}
+    - Price: ${(productPlan.priceCents / 100).toFixed(2)} ${productPlan.currency}
+    `;
+        
+        chatRef.current = ai.chats.create({
+            model: 'gemini-2.5-flash',
+            config: { systemInstruction },
+            history: history, // Load existing history into the chat session
+        });
+    }, [productPlan, brandVoice, history]);
+
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,23 +51,40 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!userInput.trim() || isLoading) return;
+        if (!userInput.trim() || isLoading || !chatRef.current) return;
 
-        const newUserMessage: ChatMessage = { role: 'user', content: userInput };
-        const updatedHistory = [...history, newUserMessage];
+        const userMessageContent = userInput;
+        const newUserMessage: ChatMessage = { role: 'user', content: userMessageContent };
         
-        onHistoryChange(updatedHistory);
+        // Optimistically add user message to the UI
+        let currentHistory = [...history, newUserMessage];
+        onHistoryChange(currentHistory);
         setUserInput('');
         setIsLoading(true);
 
         try {
-            const aiResponse = await continueChat(productPlan, updatedHistory, brandVoice);
-            const newAiMessage: ChatMessage = { role: 'model', content: aiResponse };
-            onHistoryChange([...updatedHistory, newAiMessage]);
+            const stream = await chatRef.current.sendMessageStream({ message: userMessageContent });
+            
+            let modelResponse = '';
+            let firstChunk = true;
+
+            for await (const chunk of stream) {
+                modelResponse += chunk.text;
+                if (firstChunk) {
+                    // Add the new model message object to history
+                    currentHistory = [...currentHistory, { role: 'model', content: modelResponse }];
+                    firstChunk = false;
+                } else {
+                    // Update the last message in history for a streaming effect
+                    currentHistory[currentHistory.length - 1].content = modelResponse;
+                }
+                onHistoryChange([...currentHistory]); // Pass a new array to trigger re-render
+            }
+
         } catch (error) {
             console.error("Chat error:", error);
             const errorMessage: ChatMessage = { role: 'model', content: "Sorry, I encountered an error. Please try again." };
-            onHistoryChange([...updatedHistory, errorMessage]);
+            onHistoryChange([...currentHistory, errorMessage]);
         } finally {
             setIsLoading(false);
         }
@@ -61,7 +100,7 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
                 <div className="h-80 flex flex-col bg-slate-100 dark:bg-slate-800/50 rounded-lg p-4">
                     <div className="flex-grow overflow-y-auto pr-2 space-y-4">
                         {history.length === 0 && !isLoading && (
-                            <div className="h-full flex items-center justify-center">
+                            <div className="h-full flex items-center justify-center text-center">
                                 <p className="text-slate-500">Ask me anything about your plan, like "Suggest some blog post ideas" or "What are some potential risks?"</p>
                             </div>
                         )}
@@ -72,7 +111,7 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
                                 </div>
                             </div>
                         ))}
-                         {isLoading && (
+                         {isLoading && history[history.length - 1]?.role === 'user' && (
                             <div className="flex justify-start">
                                 <div className="max-w-md p-3 rounded-lg bg-white dark:bg-slate-700">
                                     <div className="flex items-center gap-2">

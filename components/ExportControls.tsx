@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -86,6 +87,9 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `|---|---|\n`;
             md += `| Selling Price | ${formatCurrency(financials.sellingPriceCents, productPlan.currency)} |\n`;
             md += `| COGS | ${formatCurrency(financials.costOfGoodsSoldCents, productPlan.currency)} |\n`;
+            md += `| Shipping Cost | ${formatCurrency(financials.shippingCostPerUnitCents || 0, productPlan.currency)} / unit |\n`;
+            md += `| Transaction Fee | ${financials.transactionFeePercent || 0}% |\n`;
+            md += `| Monthly Fixed Costs | ${formatCurrency(financials.monthlyFixedCostsCents || 0, productPlan.currency)} |\n`;
             md += `| Monthly Sales | ${financials.estimatedMonthlySales} units |\n`;
             md += `| Marketing Budget | ${formatCurrency(financials.monthlyMarketingBudgetCents, productPlan.currency)} |\n\n`;
         }
