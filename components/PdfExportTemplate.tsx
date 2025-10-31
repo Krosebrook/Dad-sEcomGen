@@ -164,18 +164,27 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
                 {/* Financials */}
                 {financials && (
                     <Section title="Financial Projections">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse mb-6">
                             <thead><tr className="bg-gray-100"><th className="p-2">Metric</th><th className="p-2">Value</th></tr></thead>
                             <tbody>
                                 <tr><td className="p-2 border">Selling Price</td><td className="p-2 border">{formatCurrency(financials.sellingPriceCents, productPlan.currency)}</td></tr>
                                 <tr><td className="p-2 border">Cost of Goods Sold (per unit)</td><td className="p-2 border">{formatCurrency(financials.costOfGoodsSoldCents, productPlan.currency)}</td></tr>
-                                <tr><td className="p-2 border">Shipping Cost (per unit)</td><td className="p-2 border">{formatCurrency(financials.shippingCostPerUnitCents || 0, productPlan.currency)}</td></tr>
                                 <tr><td className="p-2 border">Transaction Fee</td><td className="p-2 border">{financials.transactionFeePercent || 0}%</td></tr>
                                 <tr><td className="p-2 border">Monthly Fixed Costs</td><td className="p-2 border">{formatCurrency(financials.monthlyFixedCostsCents || 0, productPlan.currency)}</td></tr>
                                 <tr><td className="p-2 border">Estimated Monthly Sales</td><td className="p-2 border">{financials.estimatedMonthlySales} units</td></tr>
                                 <tr><td className="p-2 border">Monthly Marketing Budget</td><td className="p-2 border">{formatCurrency(financials.monthlyMarketingBudgetCents, productPlan.currency)}</td></tr>
                             </tbody>
                         </table>
+                        {(financials.shippingOptions || []).length > 0 && (
+                            <>
+                                <h3 className="text-xl font-semibold mt-4 mb-2">Shipping Options</h3>
+                                <ul className="list-disc list-inside">
+                                    {(financials.shippingOptions || []).map((opt, i) => (
+                                        <li key={i}>{opt.name} ({opt.deliveryTime}): <strong>{formatCurrency(opt.costCents, productPlan.currency)}</strong></li>
+                                    ))}
+                                </ul>
+                            </>
+                        )}
                     </Section>
                 )}
 

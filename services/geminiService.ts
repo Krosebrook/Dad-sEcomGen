@@ -21,7 +21,8 @@ import {
     InfluencerMarketingPlan,
     CustomerSupportPlaybook,
     PackagingExperience,
-    LegalChecklist
+    LegalChecklist,
+    SupplierSuggestion
 } from '../types';
 
 // FIX: Initialize the GoogleGenAI client.
@@ -114,7 +115,7 @@ export async function generateProductPlan(productIdea: string, brandVoice: strin
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are an e-commerce expert creating a detailed product plan. The brand voice is "${brandVoice}". Your entire response must be a single JSON object matching the provided schema, and nothing else.`;
     
-    let prompt = `Create a comprehensive product plan for: "${productIdea}". Include a compelling product title, slug, a detailed description (including target audience), a base price in cents (USD), a base SKU, total stock, at least 3 relevant product variants, marketing tags, a list of primary materials, product dimensions (e.g., "15cm x 10cm x 5cm"), and weight in grams.`;
+    let prompt = `Create a comprehensive product plan for: "${productIdea}". Include a compelling product title, slug, a detailed and engaging product description that focuses on the benefits for its target audience, a base price in cents (USD), a base SKU, total stock, at least 3 relevant product variants, marketing tags, a list of primary materials, product dimensions (e.g., "15cm x 10cm x 5cm"), and weight in grams.`;
     if (existingVariants.length > 0) {
         prompt += `\n\nThe user has updated the variants. Please regenerate the plan based on these new variants, updating the total stock and average price accordingly: ${JSON.stringify(existingVariants)}`;
     }
@@ -177,6 +178,7 @@ export async function regeneratePlanSection(productIdea: string, currentPlan: Pr
 
     switch(section) {
         case 'description':
+            prompt = `For the product "${productIdea}", regenerate the "description" section. Make the new description more engaging and benefit-oriented for the target audience. Current description for context: "${currentPlan.description}"`;
             responseSchema = { type: Type.OBJECT, properties: { description: { type: Type.STRING }}};
             break;
         case 'variants':
@@ -469,7 +471,24 @@ export async function regenerateLaunchEmail(plan: ProductPlan, brandVoice: strin
 export async function generateFinancialProjections(plan: ProductPlan, scenario: FinancialScenario): Promise<FinancialProjections> {
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a financial analyst for e-commerce startups. Provide a JSON response based on the scenario.`;
-    const prompt = `Generate ${scenario} financial projections for "${plan.productTitle}" which sells for ${plan.priceCents / 100} USD. Estimate the cost of goods sold (COGS) per unit, estimated monthly sales in units, a suitable monthly marketing budget, an estimated shipping cost per unit, a standard transaction fee percentage (e.g., 2.9 for credit cards), and any other typical monthly fixed costs (like platform fees). Provide all monetary values in cents.`;
+    const prompt = `Generate ${scenario} financial projections for "${plan.productTitle}" which sells for ${plan.priceCents / 100} USD. 
+- Estimate the cost of goods sold (COGS) per unit.
+- Estimate monthly sales in units.
+- Suggest a suitable monthly marketing budget.
+- Provide at least two common shipping options (e.g., 'Standard Shipping', 'Express Shipping') with their estimated costs per unit and delivery times.
+- Include a standard transaction fee percentage (e.g., 2.9 for credit cards).
+- Estimate any other typical monthly fixed costs (like platform fees).
+Provide all monetary values in cents.`;
+
+    const shippingOptionSchema = {
+        type: Type.OBJECT,
+        properties: {
+            name: { type: Type.STRING },
+            costCents: { type: Type.INTEGER },
+            deliveryTime: { type: Type.STRING },
+        },
+        required: ['name', 'costCents', 'deliveryTime'],
+    };
     
      const response = await ai.models.generateContent({
         model,
@@ -483,7 +502,7 @@ export async function generateFinancialProjections(plan: ProductPlan, scenario: 
                     costOfGoodsSoldCents: { type: Type.INTEGER },
                     estimatedMonthlySales: { type: Type.INTEGER },
                     monthlyMarketingBudgetCents: { type: Type.INTEGER },
-                    shippingCostPerUnitCents: { type: Type.INTEGER },
+                    shippingOptions: { type: Type.ARRAY, items: shippingOptionSchema },
                     transactionFeePercent: { type: Type.NUMBER },
                     monthlyFixedCostsCents: { type: Type.INTEGER },
                 }
@@ -498,13 +517,14 @@ export async function generateFinancialProjections(plan: ProductPlan, scenario: 
         ...parsed,
         scenario,
         sellingPriceCents: plan.priceCents,
+        shippingOptions: parsed.shippingOptions || [],
     };
 }
 
 export async function generateNextSteps(plan: ProductPlan, brandVoice: string): Promise<NextStepItem[]> {
     const model = 'gemini-2.5-flash';
     const systemInstruction = `You are a business mentor with a ${brandVoice} tone. Create a checklist as a JSON array of objects.`;
-    const prompt = `Create a checklist of 10-12 actionable next steps for launching the e-commerce product "${plan.productTitle}". Cover areas like legal, sourcing, marketing setup, and launch day tasks.`;
+    const prompt = `Create a checklist of 10-12 actionable next steps for launching the e-commerce product "${plan.productTitle}". Cover areas like legal, sourcing, marketing setup, and launch day tasks. For each step, assign it to one of the following categories: "Legal & Compliance", "Sourcing & Production", "Marketing & Sales", or "Launch Prep".`;
     
     const response = await ai.models.generateContent({
         model,
@@ -519,7 +539,9 @@ export async function generateNextSteps(plan: ProductPlan, brandVoice: string): 
                     properties: {
                         text: { type: Type.STRING },
                         completed: { type: Type.BOOLEAN },
-                    }
+                        category: { type: Type.STRING, description: "Category: 'Legal & Compliance', 'Sourcing & Production', 'Marketing & Sales', or 'Launch Prep'" },
+                    },
+                    required: ['text', 'completed', 'category']
                 }
             }
         }
@@ -842,5 +864,54 @@ export async function generateLegalChecklist(plan: ProductPlan): Promise<LegalCh
 
     const parsed = parseJson<LegalChecklist>(response.text);
     if (!parsed) throw new Error("Failed to generate legal checklist");
+    return parsed;
+}
+
+export async function generateSupplierSuggestions(plan: ProductPlan, persona: CustomerPersona): Promise<SupplierSuggestion[]> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a sourcing and supply chain expert for e-commerce businesses. Your response must be a JSON array of potential suppliers.`;
+    const prompt = `Based on the following product, suggest 3 potential types of suppliers.
+    
+    Product Title: "${plan.productTitle}"
+    Primary Materials: "${plan.materials.join(', ')}"
+    Target Audience Background: "${persona.background}"
+
+    For each suggested supplier, provide:
+    - A plausible supplier name.
+    - A general location (e.g., 'Vietnam', 'USA - West Coast').
+    - A contact website (a link to a major sourcing platform or a manufacturer's domain).
+    - Their specialty.
+    - An estimated Minimum Order Quantity (MOQ) as an integer.
+    - A plausible contact email and phone number (it is okay to omit these if not found).
+    - Brief notes on why they are a good fit for this product.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        supplierName: { type: Type.STRING },
+                        location: { type: Type.STRING },
+                        contactWebsite: { type: Type.STRING },
+                        specialty: { type: Type.STRING },
+                        notes: { type: Type.STRING },
+                        email: { type: Type.STRING },
+                        phone: { type: Type.STRING },
+                        moq: { type: Type.INTEGER, description: "Estimated Minimum Order Quantity" },
+                    },
+                    required: ['supplierName', 'location', 'contactWebsite', 'specialty', 'notes'],
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<SupplierSuggestion[]>(response.text);
+    if (!parsed) throw new Error("Failed to generate supplier suggestions");
     return parsed;
 }

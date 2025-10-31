@@ -1,10 +1,10 @@
-
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FinancialProjections, FinancialScenario } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Input } from './ui/Input';
 import { Label } from './ui/Label';
 import { Slider } from './ui/Slider';
+import { Button } from './ui/Button';
 
 interface FinancialProjectionsCardProps {
   financials: FinancialProjections;
@@ -13,6 +13,11 @@ interface FinancialProjectionsCardProps {
   onScenarioChange: (scenario: FinancialScenario) => void;
   isRegenerating: boolean;
 }
+
+const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+);
+
 
 const formatCurrency = (cents: number, currency: string = 'USD') => {
   if (isNaN(cents)) return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(0);
@@ -24,10 +29,41 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
 
 const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ financials, onFinancialsChange, currency, onScenarioChange, isRegenerating }) => {
 
+  const [newShippingName, setNewShippingName] = useState('');
+  const [newShippingCost, setNewShippingCost] = useState('');
+  const [newShippingTime, setNewShippingTime] = useState('');
+
   const handleCentsChange = (field: keyof FinancialProjections, value: string) => {
     const floatValue = parseFloat(value);
     const cents = isNaN(floatValue) ? 0 : Math.round(floatValue * 100);
     onFinancialsChange({ ...financials, [field]: cents });
+  };
+
+  const handleAddShippingOption = (e: React.FormEvent) => {
+    e.preventDefault();
+    const costCents = Math.round(parseFloat(newShippingCost) * 100);
+    if (newShippingName.trim() && !isNaN(costCents) && newShippingTime.trim()) {
+        const newOption = {
+            name: newShippingName.trim(),
+            costCents,
+            deliveryTime: newShippingTime.trim()
+        };
+        const newFinancials = {
+            ...financials,
+            shippingOptions: [...(financials.shippingOptions || []), newOption]
+        };
+        onFinancialsChange(newFinancials);
+        // Reset form
+        setNewShippingName('');
+        setNewShippingCost('');
+        setNewShippingTime('');
+    }
+  };
+
+  const handleDeleteShippingOption = (index: number) => {
+    const newOptions = [...(financials.shippingOptions || [])];
+    newOptions.splice(index, 1);
+    onFinancialsChange({ ...financials, shippingOptions: newOptions });
   };
 
   const calculations = useMemo(() => {
@@ -36,7 +72,7 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
         costOfGoodsSoldCents, 
         estimatedMonthlySales, 
         monthlyMarketingBudgetCents,
-        shippingCostPerUnitCents = 0,
+        shippingOptions = [],
         transactionFeePercent = 0,
         monthlyFixedCostsCents = 0,
     } = financials;
@@ -44,7 +80,8 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
     const totalCOGS = costOfGoodsSoldCents * estimatedMonthlySales;
     const grossProfit = monthlyRevenue - totalCOGS;
 
-    const totalShippingCosts = (shippingCostPerUnitCents || 0) * estimatedMonthlySales;
+    const shippingCostPerUnitCents = shippingOptions.length > 0 ? shippingOptions[0].costCents : 0;
+    const totalShippingCosts = shippingCostPerUnitCents * estimatedMonthlySales;
     const totalTransactionFees = monthlyRevenue * ((transactionFeePercent || 0) / 100);
     
     const netProfit = grossProfit - monthlyMarketingBudgetCents - totalShippingCosts - totalTransactionFees - (monthlyFixedCostsCents || 0);
@@ -155,19 +192,6 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
             </div>
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-6">
                 <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200">Detailed Assumptions</h4>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Add more detail for a precise projection.</p>
-                
-                <div>
-                    <Label htmlFor="shippingCost">Shipping Cost (per unit)</Label>
-                    <Input
-                        id="shippingCost"
-                        type="number"
-                        value={(financials.shippingCostPerUnitCents || 0) / 100}
-                        onChange={(e) => handleCentsChange('shippingCostPerUnitCents', e.target.value)}
-                        min="0"
-                        step="0.01"
-                    />
-                </div>
                 <div>
                     <Label htmlFor="transactionFee">Transaction Fee (%)</Label>
                     <Input
@@ -192,6 +216,48 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
                         placeholder="e.g. Shopify plan, apps"
                     />
                 </div>
+                 <div>
+                    <h4 className="font-semibold text-lg text-slate-800 dark:text-slate-200">Shipping Options</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Manage your shipping rates. The first option in the list is used for profit calculations.</p>
+                    
+                    <div className="mt-2 space-y-2">
+                        {(financials.shippingOptions || []).map((option, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 pl-3 bg-white dark:bg-slate-700/50 rounded-md gap-2">
+                                <div className="flex-grow">
+                                    <p className="font-medium text-slate-800 dark:text-slate-200">{option.name} <span className="text-xs text-slate-500 dark:text-slate-400">({option.deliveryTime})</span></p>
+                                </div>
+                                 <p className="text-sm font-semibold flex-shrink-0">{formatCurrency(option.costCents, currency)}</p>
+                                <Button size="sm" variant="outline" onClick={() => handleDeleteShippingOption(index)} aria-label={`Delete ${option.name}`} className="w-8 h-8 p-0 flex-shrink-0">
+                                    <TrashIcon className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                         {(financials.shippingOptions || []).length === 0 && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-2">No shipping options added yet.</p>
+                         )}
+                    </div>
+
+                    <form onSubmit={handleAddShippingOption} className="mt-4 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg space-y-3">
+                        <h5 className="font-semibold text-sm text-slate-700 dark:text-slate-300">Add New Shipping Option</h5>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <Label htmlFor="shipping-name" className="text-xs">Name</Label>
+                                <Input id="shipping-name" value={newShippingName} onChange={e => setNewShippingName(e.target.value)} placeholder="e.g., Express" className="h-9" required />
+                            </div>
+                             <div>
+                                <Label htmlFor="shipping-time" className="text-xs">Delivery Time</Label>
+                                <Input id="shipping-time" value={newShippingTime} onChange={e => setNewShippingTime(e.target.value)} placeholder="e.g., 1-3 days" className="h-9" required />
+                            </div>
+                        </div>
+                        <div>
+                             <Label htmlFor="shipping-cost" className="text-xs">Cost ({currency})</Label>
+                            <Input id="shipping-cost" type="number" value={newShippingCost} onChange={e => setNewShippingCost(e.target.value)} placeholder="19.99" min="0" step="0.01" className="h-9" required />
+                        </div>
+                        <div className="text-right">
+                             <Button type="submit" size="sm">Add Option</Button>
+                        </div>
+                    </form>
+                </div>
             </div>
           </div>
           {/* Output Section */}
@@ -215,7 +281,7 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
                 <span className="font-medium text-slate-800 dark:text-slate-200">-{formatCurrency(financials.monthlyMarketingBudgetCents, currency)}</span>
             </div>
              <div className="flex justify-between items-center">
-                <span className="text-slate-600 dark:text-slate-400">Shipping Costs</span>
+                <span className="text-slate-600 dark:text-slate-400">Shipping Costs (Est.)</span>
                 <span className="font-medium text-slate-800 dark:text-slate-200">-{formatCurrency(calculations.totalShippingCosts, currency)}</span>
             </div>
              <div className="flex justify-between items-center">

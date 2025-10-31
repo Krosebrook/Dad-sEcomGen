@@ -26,6 +26,7 @@ import {
     ContentStrategy,
     ShopifyIntegration,
     SupplierQuote,
+    SupplierSuggestion,
     PriceHistoryPoint,
     AdCampaign,
     InfluencerMarketingPlan,
@@ -60,6 +61,7 @@ const App: React.FC = () => {
     const [contentStrategy, setContentStrategy] = useState<ContentStrategy | null>(null);
     const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
     const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuote[]>([]);
+    const [supplierSuggestions, setSupplierSuggestions] = useState<SupplierSuggestion[] | null>(null);
     const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
     const [adCampaigns, setAdCampaigns] = useState<AdCampaign[] | null>(null);
     const [influencerMarketingPlan, setInfluencerMarketingPlan] = useState<InfluencerMarketingPlan | null>(null);
@@ -104,6 +106,7 @@ const App: React.FC = () => {
         setContentStrategy(null);
         setShopifyIntegration(null);
         setSupplierQuotes([]);
+        setSupplierSuggestions(null);
         setPriceHistory([]);
         setAdCampaigns(null);
         setInfluencerMarketingPlan(null);
@@ -193,7 +196,7 @@ const App: React.FC = () => {
             productIdea, brandVoice, smartGoals, plan, logoImageUrl, brandKit,
             analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan,
             financials, nextSteps, chatHistory, storefrontMockupUrl, contentStrategy,
-            shopifyIntegration, supplierQuotes, priceHistory, adCampaigns: adCampaigns ?? undefined,
+            shopifyIntegration, supplierQuotes, supplierSuggestions, priceHistory, adCampaigns: adCampaigns ?? undefined,
             influencerMarketingPlan: influencerMarketingPlan ?? undefined,
             customerSupportPlaybook: customerSupportPlaybook ?? undefined,
             packagingExperience: packagingExperience ?? undefined,
@@ -249,18 +252,28 @@ const App: React.FC = () => {
             
             const financialData = data.financials;
             if (financialData) {
-                financialData.shippingCostPerUnitCents = financialData.shippingCostPerUnitCents ?? 0;
+                // Migration logic for shipping options
+                if (financialData.shippingCostPerUnitCents && (!financialData.shippingOptions || financialData.shippingOptions.length === 0)) {
+                    financialData.shippingOptions = [{
+                        name: 'Standard Shipping',
+                        costCents: financialData.shippingCostPerUnitCents,
+                        deliveryTime: '5-7 business days'
+                    }];
+                }
+                // Ensure shippingOptions is an array even if it's null/undefined from storage
+                financialData.shippingOptions = financialData.shippingOptions || [];
                 financialData.transactionFeePercent = financialData.transactionFeePercent ?? 2.9;
                 financialData.monthlyFixedCostsCents = financialData.monthlyFixedCostsCents ?? 0;
             }
             setFinancials(financialData);
 
-            setNextSteps(data.nextSteps);
+            setNextSteps(data.nextSteps?.map(step => ({ ...step, category: step.category || 'General' })) || []);
             setChatHistory(data.chatHistory || []);
             setStorefrontMockupUrl(data.storefrontMockupUrl || null);
             setContentStrategy(data.contentStrategy || null);
             setShopifyIntegration(data.shopifyIntegration || null);
             setSupplierQuotes(data.supplierQuotes || []);
+            setSupplierSuggestions(data.supplierSuggestions || null);
             setPriceHistory(data.priceHistory || []);
             setAdCampaigns(data.adCampaigns || null);
             setInfluencerMarketingPlan(data.influencerMarketingPlan || null);
@@ -378,6 +391,8 @@ const App: React.FC = () => {
                         setShopifyIntegration={setShopifyIntegration}
                         supplierQuotes={supplierQuotes}
                         setSupplierQuotes={setSupplierQuotes}
+                        supplierSuggestions={supplierSuggestions}
+                        setSupplierSuggestions={setSupplierSuggestions}
                         adCampaigns={adCampaigns}
                         setAdCampaigns={setAdCampaigns}
                         influencerMarketingPlan={influencerMarketingPlan}

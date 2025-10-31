@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ProductPlan, ProductVariant, RegenerateableSection } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';

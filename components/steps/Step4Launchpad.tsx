@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Correctly import types from the central types file.
-import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, ContentStrategy, ShopifyIntegration, SupplierQuote, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../../types';
+import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, ContentStrategy, ShopifyIntegration, SupplierQuote, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SupplierSuggestion } from '../../types';
 // FIX: Correctly import services from the geminiService file.
 import { generateMarketingPlan, generateFinancialProjections, generateNextSteps, generateStorefrontMockup, generateAdCampaigns, generateInfluencerPlan, generateCustomerSupportPlaybook, generatePackagingExperience, generateLegalChecklist } from '../../services/geminiService';
 
@@ -53,6 +53,9 @@ interface Step4LaunchpadProps {
     supplierQuotes: SupplierQuote[];
     setSupplierQuotes: React.Dispatch<React.SetStateAction<SupplierQuote[]>>;
 
+    supplierSuggestions: SupplierSuggestion[] | null;
+    setSupplierSuggestions: React.Dispatch<React.SetStateAction<SupplierSuggestion[] | null>>;
+
     adCampaigns: AdCampaign[] | null;
     setAdCampaigns: React.Dispatch<React.SetStateAction<AdCampaign[] | null>>;
 
@@ -98,6 +101,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         contentStrategy, setContentStrategy,
         shopifyIntegration, setShopifyIntegration,
         supplierQuotes, setSupplierQuotes,
+        supplierSuggestions, setSupplierSuggestions,
         adCampaigns, setAdCampaigns,
         influencerMarketingPlan, setInfluencerMarketingPlan,
         customerSupportPlaybook, setCustomerSupportPlaybook,
@@ -206,8 +210,8 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         onPlanModified();
     };
 
-    const handleAddTask = (text: string) => {
-        setNextSteps([...nextSteps, { text, completed: false }]);
+    const handleAddTask = (text: string, category: string) => {
+        setNextSteps([...nextSteps, { text, completed: false, category }]);
         onPlanModified();
     };
 
@@ -227,6 +231,12 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         setSupplierQuotes(newQuotes);
         onPlanModified();
     };
+    
+    const handleSupplierSuggestionsChange = (newSuggestions: SupplierSuggestion[]) => {
+        setSupplierSuggestions(newSuggestions);
+        onPlanModified();
+    };
+
 
     if (isLoading || isDataMissing) {
         return <div className="w-full max-w-4xl space-y-8 animate-fade-in"><LoadingSpinner message="Building your advanced launchpad assets..." /></div>;
@@ -252,7 +262,15 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
             {customerSupportPlaybook && <CustomerSupportCard playbook={customerSupportPlaybook} />}
             {packagingExperience && <PackagingExperienceCard experience={packagingExperience} />}
             <StorefrontMockupCard onGenerate={handleGenerateMockup} isGenerating={isGeneratingMockup} mockupUrl={storefrontMockupUrl} />
-            <SupplierTrackerCard quotes={supplierQuotes} onQuotesChange={handleSupplierQuotesChange} currency={productPlan.currency} />
+            <SupplierTrackerCard 
+                quotes={supplierQuotes} 
+                onQuotesChange={handleSupplierQuotesChange} 
+                currency={productPlan.currency}
+                productPlan={productPlan}
+                customerPersona={customerPersona}
+                suggestions={supplierSuggestions}
+                onSuggestionsChange={handleSupplierSuggestionsChange}
+            />
             <ShopifyIntegrationCard 
                 productPlan={productPlan} 
                 logoImageUrl={logoImageUrl}

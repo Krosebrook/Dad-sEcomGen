@@ -73,13 +73,20 @@ export interface CompetitiveAnalysis {
 
 export type FinancialScenario = 'Pessimistic' | 'Realistic' | 'Optimistic';
 
+export interface ShippingOption {
+  name: string;
+  costCents: number;
+  deliveryTime: string; // e.g., "5-7 business days"
+}
+
 export interface FinancialProjections {
   scenario: FinancialScenario;
   sellingPriceCents: number;
   costOfGoodsSoldCents: number;
   estimatedMonthlySales: number;
   monthlyMarketingBudgetCents: number;
-  shippingCostPerUnitCents: number;
+  shippingCostPerUnitCents?: number; // Kept for backward compatibility
+  shippingOptions: ShippingOption[];
   transactionFeePercent: number;
   monthlyFixedCostsCents: number;
 }
@@ -133,6 +140,7 @@ export interface CustomerPersona {
 export interface NextStepItem {
   text: string;
   completed: boolean;
+  category: string;
 }
 
 export interface AdSet {
@@ -190,6 +198,17 @@ export interface LegalChecklist {
     checklistItems: LegalChecklistItem[];
 }
 
+export interface SupplierSuggestion {
+  supplierName: string;
+  location: string;
+  contactWebsite: string;
+  specialty: string;
+  notes: string;
+  email?: string;
+  phone?: string;
+  moq?: number;
+}
+
 export interface AppData {
     productIdea: string;
     brandVoice: string;
@@ -209,6 +228,7 @@ export interface AppData {
     contentStrategy: ContentStrategy | null;
     shopifyIntegration: ShopifyIntegration | null;
     supplierQuotes: SupplierQuote[];
+    supplierSuggestions?: SupplierSuggestion[] | null;
     priceHistory: PriceHistoryPoint[];
     adCampaigns?: AdCampaign[];
     influencerMarketingPlan?: InfluencerMarketingPlan;
@@ -258,6 +278,10 @@ export interface SupplierQuote {
     name: string;
     pricePerUnitCents: number;
     moq: number;
+    email?: string;
+    phone?: string;
+    website?: string;
+    notes?: string;
 }
 
 export interface ContentStrategy {
