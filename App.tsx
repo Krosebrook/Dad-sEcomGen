@@ -23,7 +23,7 @@ import {
     ChatMessage,
     SavedVenture,
     AppData,
-    ContentStrategy,
+    SeoStrategy,
     ShopifyIntegration,
     SupplierQuote,
     SupplierSuggestion,
@@ -35,12 +35,15 @@ import {
     LegalChecklist,
 } from './types';
 
+type Theme = 'light' | 'dark';
+
 const App: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [productIdea, setProductIdea] = useState('');
     const [brandVoice, setBrandVoice] = useState('Witty & Humorous Dad');
     const [isLoading, setIsLoading] = useState(false);
     const [inputError, setInputError] = useState<string | null>(null);
+    const [theme, setTheme] = useState<Theme>('light');
 
     // State for all data generated throughout the steps
     const [ventureId, setVentureId] = useState<string | null>(null);
@@ -58,7 +61,7 @@ const App: React.FC = () => {
     const [nextSteps, setNextSteps] = useState<NextStepItem[]>([]);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [storefrontMockupUrl, setStorefrontMockupUrl] = useState<string | null>(null);
-    const [contentStrategy, setContentStrategy] = useState<ContentStrategy | null>(null);
+    const [seoStrategy, setSeoStrategy] = useState<SeoStrategy | null>(null);
     const [shopifyIntegration, setShopifyIntegration] = useState<ShopifyIntegration | null>(null);
     const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuote[]>([]);
     const [supplierSuggestions, setSupplierSuggestions] = useState<SupplierSuggestion[] | null>(null);
@@ -80,7 +83,29 @@ const App: React.FC = () => {
         if (ventures) {
             setSavedVentures(JSON.parse(ventures));
         }
+
+        const savedTheme = localStorage.getItem('theme') as Theme || 'light';
+        setTheme(savedTheme);
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
     }, []);
+
+    const toggleTheme = () => {
+        setTheme(prevTheme => {
+            const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme', newTheme);
+            if (newTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            return newTheme;
+        });
+    };
 
     const resetState = () => {
         setCurrentStep(1);
@@ -103,7 +128,7 @@ const App: React.FC = () => {
         setIsPlanSaved(false);
         setChatHistory([]);
         setStorefrontMockupUrl(null);
-        setContentStrategy(null);
+        setSeoStrategy(null);
         setShopifyIntegration(null);
         setSupplierQuotes([]);
         setSupplierSuggestions(null);
@@ -195,7 +220,7 @@ const App: React.FC = () => {
         const currentAppData: AppData = {
             productIdea, brandVoice, smartGoals, plan, logoImageUrl, brandKit,
             analysis, swotAnalysis, customerPersona, personaAvatarUrl, marketingPlan,
-            financials, nextSteps, chatHistory, storefrontMockupUrl, contentStrategy,
+            financials, nextSteps, chatHistory, storefrontMockupUrl, seoStrategy,
             shopifyIntegration, supplierQuotes, supplierSuggestions, priceHistory, adCampaigns: adCampaigns ?? undefined,
             influencerMarketingPlan: influencerMarketingPlan ?? undefined,
             customerSupportPlaybook: customerSupportPlaybook ?? undefined,
@@ -242,11 +267,40 @@ const App: React.FC = () => {
             setPersonaAvatarUrl(data.personaAvatarUrl);
 
             const marketingData = data.marketingPlan;
-            if (marketingData && marketingData.adCopy) {
-                marketingData.adCopy = marketingData.adCopy.map(ad => ({
-                    ...ad,
-                    audienceTargeting: ad.audienceTargeting ?? { demographics: [], interests: [], keywords: [] }
-                }));
+            if (marketingData) {
+                if (marketingData.adCopy) {
+                    marketingData.adCopy = marketingData.adCopy.map((ad: any) => {
+                        const migratedAd = {
+                            ...ad,
+                            audienceTargeting: ad.audienceTargeting ?? { demographics: [], interests: [], keywords: [] },
+                        };
+            
+                        if (migratedAd.headlines && migratedAd.descriptions && !migratedAd.variations) {
+                            migratedAd.variations = [{
+                                headlines: migratedAd.headlines,
+                                descriptions: migratedAd.descriptions,
+                            }];
+                            delete migratedAd.headlines;
+                            delete migratedAd.descriptions;
+                        } else {
+                             migratedAd.variations = migratedAd.variations || [];
+                        }
+                        return migratedAd;
+                    });
+                }
+            
+                if (marketingData.socialMediaPosts) {
+                    marketingData.socialMediaPosts = marketingData.socialMediaPosts.map((post: any) => {
+                         const migratedPost = { ...post };
+                         if (migratedPost.postText && !migratedPost.postTextVariations) {
+                             migratedPost.postTextVariations = [migratedPost.postText];
+                             delete migratedPost.postText;
+                         } else {
+                             migratedPost.postTextVariations = migratedPost.postTextVariations || [];
+                         }
+                         return migratedPost;
+                    });
+                }
             }
             setMarketingPlan(marketingData);
             
@@ -267,10 +321,10 @@ const App: React.FC = () => {
             }
             setFinancials(financialData);
 
-            setNextSteps(data.nextSteps?.map(step => ({ ...step, category: step.category || 'General' })) || []);
+            setNextSteps(data.nextSteps?.map(step => ({ ...step, category: step.category || 'General', priority: (step as any).priority || 'Medium' })) || []);
             setChatHistory(data.chatHistory || []);
             setStorefrontMockupUrl(data.storefrontMockupUrl || null);
-            setContentStrategy(data.contentStrategy || null);
+            setSeoStrategy(data.seoStrategy || null);
             setShopifyIntegration(data.shopifyIntegration || null);
             setSupplierQuotes(data.supplierQuotes || []);
             setSupplierSuggestions(data.supplierSuggestions || null);
@@ -316,7 +370,12 @@ const App: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 font-sans">
-            <Header onShowVentures={() => setShowVentures(true)} hasVentures={savedVentures.length > 0} />
+            <Header 
+                onShowVentures={() => setShowVentures(true)} 
+                hasVentures={savedVentures.length > 0}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+            />
             <main className="flex-grow container mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
                 <ProgressBar currentStep={currentStep} steps={steps} />
                 
@@ -385,8 +444,8 @@ const App: React.FC = () => {
                         setChatHistory={setChatHistory}
                         storefrontMockupUrl={storefrontMockupUrl}
                         setStorefrontMockupUrl={setStorefrontMockupUrl}
-                        contentStrategy={contentStrategy}
-                        setContentStrategy={setContentStrategy}
+                        seoStrategy={seoStrategy}
+                        setSeoStrategy={setSeoStrategy}
                         shopifyIntegration={shopifyIntegration}
                         setShopifyIntegration={setShopifyIntegration}
                         supplierQuotes={supplierQuotes}

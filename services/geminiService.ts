@@ -14,7 +14,7 @@ import {
     FinancialScenario,
     NextStepItem,
     ProductScoutResult,
-    ContentStrategy,
+    SeoStrategy,
     GroundingSource,
     LaunchEmail,
     AdCampaign,
@@ -370,9 +370,18 @@ The target customer persona is:
 - Goals: ${customerPersona.goals.join(', ')}
 - Pain Points: ${customerPersona.painPoints.join(', ')}
 
-Generate 3 distinct social media posts for the product launch, tailored for platforms like Instagram, Facebook, and X (formerly Twitter). Each post should include engaging text, relevant hashtags, and a creative visual prompt.
-Also, generate ad copy for Google Ads (3 headlines, 2 descriptions) with detailed audience targeting suggestions (demographics, interests, keywords) based on the customer persona.
+Generate social media posts for platforms like Instagram, Facebook, and X (formerly Twitter). For each platform, provide 3 distinct post text variations. Each post should also include relevant hashtags and a creative visual prompt.
+Also, generate ad copy for Google Ads. Provide 3 distinct ad variations. Each ad variation must have 3 headlines and 2 descriptions. Include detailed audience targeting suggestions (demographics, interests, keywords) based on the customer persona.
 Finally, create a product launch email.`;
+    
+    const adVariationSchema = {
+        type: Type.OBJECT,
+        properties: {
+            headlines: { type: Type.ARRAY, items: { type: Type.STRING } },
+            descriptions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['headlines', 'descriptions'],
+    };
     
     const response = await ai.models.generateContent({
         model,
@@ -389,11 +398,11 @@ Finally, create a product launch email.`;
                             type: Type.OBJECT,
                             properties: {
                                 platform: { type: Type.STRING },
-                                postText: { type: Type.STRING },
+                                postTextVariations: { type: Type.ARRAY, items: { type: Type.STRING }, description: "An array of 3 distinct post text variations." },
                                 hashtags: { type: Type.ARRAY, items: { type: Type.STRING }},
                                 visualPrompt: { type: Type.STRING },
                             },
-                             required: ['platform', 'postText', 'hashtags', 'visualPrompt'],
+                             required: ['platform', 'postTextVariations', 'hashtags', 'visualPrompt'],
                         }
                     },
                     adCopy: {
@@ -402,8 +411,7 @@ Finally, create a product launch email.`;
                             type: Type.OBJECT,
                             properties: {
                                 platform: { type: Type.STRING },
-                                headlines: { type: Type.ARRAY, items: { type: Type.STRING }},
-                                descriptions: { type: Type.ARRAY, items: { type: Type.STRING }},
+                                variations: { type: Type.ARRAY, items: adVariationSchema, description: "An array of 3 distinct ad variations." },
                                 audienceTargeting: {
                                     type: Type.OBJECT,
                                     properties: {
@@ -414,7 +422,7 @@ Finally, create a product launch email.`;
                                     required: ['demographics', 'interests', 'keywords'],
                                 }
                             },
-                             required: ['platform', 'headlines', 'descriptions', 'audienceTargeting'],
+                             required: ['platform', 'variations', 'audienceTargeting'],
                         }
                     },
                     launchEmail: {
@@ -524,7 +532,30 @@ Provide all monetary values in cents.`;
 export async function generateNextSteps(plan: ProductPlan, brandVoice: string): Promise<NextStepItem[]> {
     const model = 'gemini-2.5-flash';
     const systemInstruction = `You are a business mentor with a ${brandVoice} tone. Create a checklist as a JSON array of objects.`;
-    const prompt = `Create a checklist of 10-12 actionable next steps for launching the e-commerce product "${plan.productTitle}". Cover areas like legal, sourcing, marketing setup, and launch day tasks. For each step, assign it to one of the following categories: "Legal & Compliance", "Sourcing & Production", "Marketing & Sales", or "Launch Prep".`;
+    const prompt = `You are creating a launch checklist for an e-commerce entrepreneur. It is absolutely critical that every step is specific, actionable, and directly helpful. Avoid generic advice.
+
+Product Information for Context:
+- Product Name: "${plan.productTitle}"
+- Description: "${plan.description}"
+- Key Materials: "${plan.materials.join(', ')}"
+
+Based on this product, generate a prioritized checklist of 10-12 highly specific and actionable next steps for a successful launch.
+
+Instructions:
+1.  **Prioritization is Key:** The final list must be ordered from highest to lowest priority.
+2.  **Be Specific:** Each step must be a concrete task. Do not use vague verbs. Every step must start with a strong action verb (e.g., 'Research', 'File', 'Design', 'Purchase').
+3.  **Examples of Good vs. Bad Steps:**
+    - BAD: "Look into legal requirements."
+    - GOOD: "File for a DBA ('Doing Business As') with your local county clerk's office."
+    - BAD: "Source materials."
+    - GOOD: "Request quotes from 3 potential suppliers for '${plan.materials[0] || 'your primary material'}' found on Alibaba or ThomasNet."
+    - BAD: "Do marketing."
+    - GOOD: "Draft 5 announcement posts for Instagram showcasing the product's unique features, and schedule them to go live on launch day."
+4.  **Categorize and Prioritize Each Step:** For each step, you must assign:
+    - A 'priority' ('High', 'Medium', or 'Low').
+    - A 'category' from this exact list: "Legal & Compliance", "Sourcing & Production", "Marketing & Sales", or "Launch Prep".
+
+Generate the response as a JSON array of objects, ordered by priority.`;
     
     const response = await ai.models.generateContent({
         model,
@@ -538,10 +569,11 @@ export async function generateNextSteps(plan: ProductPlan, brandVoice: string): 
                     type: Type.OBJECT,
                     properties: {
                         text: { type: Type.STRING },
-                        completed: { type: Type.BOOLEAN },
+                        completed: { type: Type.BOOLEAN, description: "Default to false." },
                         category: { type: Type.STRING, description: "Category: 'Legal & Compliance', 'Sourcing & Production', 'Marketing & Sales', or 'Launch Prep'" },
+                        priority: { type: Type.STRING, description: "Priority: 'High', 'Medium', or 'Low'" },
                     },
-                    required: ['text', 'completed', 'category']
+                    required: ['text', 'completed', 'category', 'priority']
                 }
             }
         }
@@ -597,64 +629,37 @@ export async function generateStorefrontMockup(plan: ProductPlan, logoUrl: strin
     throw new Error("Failed to generate storefront mockup");
 }
 
-export async function generateContentStrategy(plan: ProductPlan, persona: CustomerPersona, brandVoice: string): Promise<ContentStrategy> {
+export async function generateSeoStrategy(plan: ProductPlan, persona: CustomerPersona, brandVoice: string): Promise<SeoStrategy> {
     const model = 'gemini-2.5-pro';
-    const systemInstruction = `You are a content marketing strategist with a ${brandVoice} tone. Your response must be a JSON object.`;
-    const prompt = `Create a content strategy for "${plan.productTitle}" targeting the customer persona "${persona.name}". Provide an SEO keyword pack of 10-15 keywords, 5 blog post ideas, and a 30-day content calendar (4 weeks, with a theme for each week and 2-3 daily post ideas per week for platforms like Instagram, Facebook, or a blog).`;
-
+    const systemInstruction = `You are a world-class SEO strategist and content marketing expert with a ${brandVoice} tone. Your response must be a single JSON object. Use Google Search to get current data on keyword competition and search volume.`;
+    const prompt = `Create an advanced SEO and content strategy for the product "${plan.productTitle}", targeting the customer persona "${persona.name}".
+    
+    1.  **Keyword Analysis**: Generate a list of at least 10 relevant keywords. For each, provide an estimated monthly search volume (as a string range, e.g., "1k-10k"), competition level ('Low', 'Medium', 'High'), and relevance ('High', 'Medium', 'Low').
+    2.  **Strategy Summary**: Write a brief, actionable summary of the overall SEO strategy.
+    3.  **Content Angle Ideas**: Propose 3 distinct content angle ideas that target the most promising keywords. Provide a compelling title and a short description for each.
+    4.  **Content Calendar**: Create a 4-week content calendar with a theme for each week and 2-3 post ideas per week for relevant platforms (e.g., Blog, Instagram, Facebook).`;
+    
     const response = await ai.models.generateContent({
         model,
         contents: prompt,
         config: {
             systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    seoKeywordPack: { type: Type.ARRAY, items: { type: Type.STRING }},
-                    blogPostIdeas: { type: Type.ARRAY, items: { type: Type.STRING }},
-                    contentCalendar: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                week: { type: Type.INTEGER },
-                                theme: { type: Type.STRING },
-                                dailyPosts: {
-                                    type: Type.ARRAY,
-                                    items: {
-                                        type: Type.OBJECT,
-                                        properties: {
-                                            platform: { type: Type.STRING },
-                                            idea: { type: Type.STRING },
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            tools: [{ googleSearch: {} }]
         }
     });
-
-    const parsed = parseJson<ContentStrategy>(response.text);
-    if (!parsed) throw new Error("Failed to generate content strategy");
-    return parsed;
-}
-
-export async function generateBlogPost(title: string, plan: ProductPlan, brandVoice: string): Promise<string> {
-    const model = 'gemini-2.5-pro';
-    const systemInstruction = `You are a skilled blog writer with a ${brandVoice} tone. Write a well-structured blog post in Markdown format.`;
-    const prompt = `Write a blog post titled "${title}" for the product "${plan.productTitle}". The post should be engaging, informative, and around 500-700 words. Incorporate keywords related to the product and its benefits. Use Markdown for formatting (headings, lists, bold text).`;
-
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: { systemInstruction },
-    });
     
-    return response.text;
+    const parsed = parseJson<SeoStrategy>(response.text);
+    if (!parsed) throw new Error("Failed to generate SEO strategy");
+
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    if (groundingChunks) {
+        parsed.sources = groundingChunks
+            .map((chunk: any) => chunk.web)
+            .filter((web: any) => web)
+            .map((web: any) => ({ uri: web.uri, title: web.title })) as GroundingSource[];
+    }
+
+    return parsed;
 }
 
 export async function generateAdCampaigns(plan: ProductPlan, persona: CustomerPersona, marketingPlan: MarketingKickstart): Promise<AdCampaign[]> {
@@ -876,14 +881,17 @@ export async function generateSupplierSuggestions(plan: ProductPlan, persona: Cu
     Primary Materials: "${plan.materials.join(', ')}"
     Target Audience Background: "${persona.background}"
 
-    For each suggested supplier, provide:
+    For each suggested supplier, you MUST provide all of the following fields:
     - A plausible supplier name.
     - A general location (e.g., 'Vietnam', 'USA - West Coast').
     - A contact website (a link to a major sourcing platform or a manufacturer's domain).
     - Their specialty.
     - An estimated Minimum Order Quantity (MOQ) as an integer.
-    - A plausible contact email and phone number (it is okay to omit these if not found).
-    - Brief notes on why they are a good fit for this product.`;
+    - A plausible contact email (e.g., sales@suppliername.com). This field is mandatory.
+    - A plausible contact phone number in a standard format. This field is mandatory.
+    - Brief notes on why they are a good fit for this product.
+
+    Your response must be a valid JSON array. All fields listed above are required for each supplier object. Do not omit any fields.`;
 
     const response = await ai.models.generateContent({
         model,
@@ -901,11 +909,11 @@ export async function generateSupplierSuggestions(plan: ProductPlan, persona: Cu
                         contactWebsite: { type: Type.STRING },
                         specialty: { type: Type.STRING },
                         notes: { type: Type.STRING },
-                        email: { type: Type.STRING },
-                        phone: { type: Type.STRING },
-                        moq: { type: Type.INTEGER, description: "Estimated Minimum Order Quantity" },
+                        email: { type: Type.STRING, description: "A plausible contact email for the supplier. This is a required field." },
+                        phone: { type: Type.STRING, description: "A plausible contact phone number for the supplier. This is a required field." },
+                        moq: { type: Type.INTEGER, description: "Estimated Minimum Order Quantity. This is a required field." },
                     },
-                    required: ['supplierName', 'location', 'contactWebsite', 'specialty', 'notes'],
+                    required: ['supplierName', 'location', 'contactWebsite', 'specialty', 'notes', 'email', 'phone', 'moq'],
                 },
             },
         },

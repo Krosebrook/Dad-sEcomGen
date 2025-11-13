@@ -24,15 +24,19 @@ export type RegenerateableSection = 'description' | 'variants' | 'tags' | 'mater
 
 export interface SocialMediaPost {
   platform: string;
-  postText: string;
+  postTextVariations: string[];
   hashtags: string[];
   visualPrompt: string;
 }
 
-export interface AdCopy {
-  platform: string;
+export interface AdVariation {
   headlines: string[];
   descriptions: string[];
+}
+
+export interface AdCopy {
+  platform: string;
+  variations: AdVariation[];
   audienceTargeting: {
     demographics: string[];
     interests: string[];
@@ -141,6 +145,7 @@ export interface NextStepItem {
   text: string;
   completed: boolean;
   category: string;
+  priority: 'High' | 'Medium' | 'Low';
 }
 
 export interface AdSet {
@@ -209,6 +214,31 @@ export interface SupplierSuggestion {
   moq?: number;
 }
 
+export interface KeywordAnalysis {
+  keyword: string;
+  competition: 'Low' | 'Medium' | 'High';
+  monthlySearches: string; // e.g., "1k-10k"
+  relevance: 'High' | 'Medium' | 'Low';
+}
+
+export interface SeoStrategy {
+    strategySummary: string;
+    keywordAnalysis: KeywordAnalysis[];
+    contentAngleIdeas: {
+        title: string;
+        description: string;
+    }[];
+    contentCalendar: {
+        week: number;
+        theme: string;
+        dailyPosts: {
+            platform: string;
+            idea: string;
+        }[];
+    }[];
+    sources?: GroundingSource[];
+}
+
 export interface AppData {
     productIdea: string;
     brandVoice: string;
@@ -225,7 +255,7 @@ export interface AppData {
     nextSteps: NextStepItem[];
     chatHistory: ChatMessage[];
     storefrontMockupUrl: string | null;
-    contentStrategy: ContentStrategy | null;
+    seoStrategy: SeoStrategy | null;
     shopifyIntegration: ShopifyIntegration | null;
     supplierQuotes: SupplierQuote[];
     supplierSuggestions?: SupplierSuggestion[] | null;
@@ -282,19 +312,6 @@ export interface SupplierQuote {
     phone?: string;
     website?: string;
     notes?: string;
-}
-
-export interface ContentStrategy {
-    seoKeywordPack: string[];
-    blogPostIdeas: string[];
-    contentCalendar: {
-        week: number;
-        theme: string;
-        dailyPosts: {
-            platform: string;
-            idea: string;
-        }[];
-    }[];
 }
 
 export interface PriceHistoryPoint {

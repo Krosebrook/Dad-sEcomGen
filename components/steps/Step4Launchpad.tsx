@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Correctly import types from the central types file.
-import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, ContentStrategy, ShopifyIntegration, SupplierQuote, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SupplierSuggestion } from '../../types';
+import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, SeoStrategy, ShopifyIntegration, SupplierQuote, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SupplierSuggestion } from '../../types';
 // FIX: Correctly import services from the geminiService file.
 import { generateMarketingPlan, generateFinancialProjections, generateNextSteps, generateStorefrontMockup, generateAdCampaigns, generateInfluencerPlan, generateCustomerSupportPlaybook, generatePackagingExperience, generateLegalChecklist } from '../../services/geminiService';
 
@@ -10,7 +10,7 @@ import NextStepsCard from '../NextStepsCard';
 import ChatCard from '../ChatCard';
 import ExportControls from '../ExportControls';
 import StorefrontMockupCard from '../StorefrontMockupCard';
-import ContentStrategyCard from '../ContentStrategyCard';
+import SeoStrategyCard from '../SeoStrategyCard';
 import ShopifyIntegrationCard from '../ShopifyIntegrationCard';
 import SupplierTrackerCard from '../SupplierTrackerCard';
 import AdCampaignGeneratorCard from '../AdCampaignGeneratorCard';
@@ -44,8 +44,8 @@ interface Step4LaunchpadProps {
     storefrontMockupUrl: string | null;
     setStorefrontMockupUrl: React.Dispatch<React.SetStateAction<string | null>>;
 
-    contentStrategy: ContentStrategy | null;
-    setContentStrategy: React.Dispatch<React.SetStateAction<ContentStrategy | null>>;
+    seoStrategy: SeoStrategy | null;
+    setSeoStrategy: React.Dispatch<React.SetStateAction<SeoStrategy | null>>;
     
     shopifyIntegration: ShopifyIntegration | null;
     setShopifyIntegration: React.Dispatch<React.SetStateAction<ShopifyIntegration | null>>;
@@ -98,7 +98,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         nextSteps, setNextSteps,
         chatHistory, setChatHistory,
         storefrontMockupUrl, setStorefrontMockupUrl,
-        contentStrategy, setContentStrategy,
+        seoStrategy, setSeoStrategy,
         shopifyIntegration, setShopifyIntegration,
         supplierQuotes, setSupplierQuotes,
         supplierSuggestions, setSupplierSuggestions,
@@ -210,8 +210,8 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         onPlanModified();
     };
 
-    const handleAddTask = (text: string, category: string) => {
-        setNextSteps([...nextSteps, { text, completed: false, category }]);
+    const handleAddTask = (text: string, category: string, priority: 'High' | 'Medium' | 'Low') => {
+        setNextSteps([...nextSteps, { text, completed: false, category, priority }]);
         onPlanModified();
     };
 
@@ -256,7 +256,7 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
                 />
             )}
             {financials && <FinancialProjectionsCard financials={financials} onFinancialsChange={(f) => { setFinancials(f); onPlanModified(); }} currency={productPlan.currency} onScenarioChange={handleScenarioChange} isRegenerating={isRegeneratingFinancials} />}
-            {customerPersona && <ContentStrategyCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} contentStrategy={contentStrategy} setContentStrategy={setContentStrategy} onPlanModified={onPlanModified} />}
+            {customerPersona && <SeoStrategyCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} seoStrategy={seoStrategy} setSeoStrategy={setSeoStrategy} onPlanModified={onPlanModified} />}
             {adCampaigns && <AdCampaignGeneratorCard campaigns={adCampaigns} />}
             {influencerMarketingPlan && <InfluencerMarketingCard plan={influencerMarketingPlan} />}
             {customerSupportPlaybook && <CustomerSupportCard playbook={customerSupportPlaybook} />}
@@ -288,7 +288,8 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
                 analysis={competitiveAnalysis} 
                 marketingPlan={marketingPlan} 
                 financials={financials} 
-                nextSteps={nextSteps} 
+                nextSteps={nextSteps}
+                seoStrategy={seoStrategy}
                 adCampaigns={adCampaigns}
                 influencerMarketingPlan={influencerMarketingPlan}
                 customerSupportPlaybook={customerSupportPlaybook}

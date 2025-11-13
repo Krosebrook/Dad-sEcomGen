@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
+import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, SeoStrategy, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
 
 interface PdfExportTemplateProps {
     productPlan: ProductPlan;
@@ -8,6 +8,7 @@ interface PdfExportTemplateProps {
     marketingPlan: MarketingKickstart | null;
     financials: FinancialProjections | null;
     nextSteps: NextStepItem[] | null;
+    seoStrategy: SeoStrategy | null;
     adCampaigns: AdCampaign[] | null;
     influencerMarketingPlan: InfluencerMarketingPlan | null;
     customerSupportPlaybook: CustomerSupportPlaybook | null;
@@ -33,7 +34,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode; className?: 
 const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
     const {
         productPlan, logoImageUrl, analysis, marketingPlan, financials, nextSteps,
-        adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist
+        seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist
     } = props;
 
     return (
@@ -83,14 +84,51 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
                     <ul className="list-disc list-inside">{analysis.differentiationStrategies.map((s, i) => (<li key={i}>{s}</li>))}</ul>
                 </Section>
             )}
+            
+             {/* SEO & Content Strategy */}
+            {seoStrategy && (
+                <Section title="SEO & Content Strategy" className="break-before-page">
+                    <p className="mb-6"><strong>Strategy Summary:</strong> {seoStrategy.strategySummary}</p>
+                    <h3 className="text-xl font-semibold mb-2">Keyword Analysis</h3>
+                    <table className="w-full text-left border-collapse mb-6 text-sm">
+                        <thead><tr className="bg-gray-100"><th className="p-2">Keyword</th><th className="p-2">Competition</th><th className="p-2">Searches</th><th className="p-2">Relevance</th></tr></thead>
+                        <tbody>{seoStrategy.keywordAnalysis.map((kw, i) => (<tr key={i}><td className="p-2 border">{kw.keyword}</td><td className="p-2 border">{kw.competition}</td><td className="p-2 border">{kw.monthlySearches}</td><td className="p-2 border">{kw.relevance}</td></tr>))}</tbody>
+                    </table>
+                    <h3 className="text-xl font-semibold mb-2 mt-6">Content Angle Ideas</h3>
+                    {seoStrategy.contentAngleIdeas.map((idea, i) => (<div key={i} className="mb-2"><p><strong>{idea.title}:</strong> {idea.description}</p></div>))}
+                </Section>
+            )}
+
 
             {/* Marketing Kickstart */}
             {marketingPlan && (
                 <Section title="Marketing Kickstart" className="break-before-page">
                     <h3 className="text-xl font-semibold mb-2">Social Media Posts</h3>
-                    {marketingPlan.socialMediaPosts.map((p, i) => (<div key={i} className="mb-4 p-2 border rounded"><strong>{p.platform}:</strong><p className="whitespace-pre-wrap">{p.postText}</p><p><em>Hashtags: {p.hashtags.join(' ')}</em></p></div>))}
+                    {marketingPlan.socialMediaPosts.map((p, i) => (
+                    <div key={i} className="mb-4 p-2 border rounded">
+                        <strong>{p.platform}:</strong>
+                        {p.postTextVariations && p.postTextVariations.map((text, j) => (
+                            <div key={j} className="mt-2 pl-2 border-l-2">
+                                <p className="font-semibold text-sm">Variation {j + 1}</p>
+                                <p className="whitespace-pre-wrap">{text}</p>
+                            </div>
+                        ))}
+                        <p className="mt-2"><em>Hashtags: {p.hashtags.join(' ')}</em></p>
+                    </div>
+                    ))}
                     <h3 className="text-xl font-semibold mb-2 mt-6">Ad Copy</h3>
-                    {marketingPlan.adCopy.map((a, i) => (<div key={i} className="mb-4 p-2 border rounded"><strong>{a.platform}:</strong><p>Headlines: {a.headlines.join(' | ')}</p><p>Descriptions: {a.descriptions.join(' | ')}</p></div>))}
+                    {marketingPlan.adCopy.map((a, i) => (
+                    <div key={i} className="mb-4 p-2 border rounded">
+                        <strong>{a.platform}:</strong>
+                        {a.variations && a.variations.map((v, j) => (
+                            <div key={j} className="mt-2 pl-2 border-l-2">
+                                <p className="font-semibold text-sm">Variation {j + 1}</p>
+                                <p>Headlines: {v.headlines.join(' | ')}</p>
+                                <p>Descriptions: {v.descriptions.join(' | ')}</p>
+                            </div>
+                        ))}
+                    </div>
+                    ))}
                     <h3 className="text-xl font-semibold mb-2 mt-6">Launch Email</h3>
                     <div className="p-2 border rounded"><p><strong>Subject:</strong> {marketingPlan.launchEmail.subject}</p><p className="whitespace-pre-wrap mt-2">{marketingPlan.launchEmail.body}</p></div>
                 </Section>

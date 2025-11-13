@@ -207,7 +207,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
               <div className="space-y-2">
                   <Input
                     type="text"
-                    value={editedContent}
+                    value={editedContent as string}
                     onChange={(e) => setEditedContent(e.target.value)}
                     className="text-2xl md:text-3xl font-semibold h-auto py-1"
                     autoFocus
@@ -259,7 +259,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
           {editingField === 'description' ? (
              <div className="space-y-2">
                 <Textarea
-                  value={editedContent}
+                  value={editedContent as string}
                   onChange={(e) => setEditedContent(e.target.value)}
                   className="min-h-[200px]"
                   autoFocus
@@ -316,7 +316,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
                     </div>
                     {editingField === 'materials' ? (
                         <div className="space-y-2">
-                            <Input value={editedContent} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., Cotton, Leather, Recycled Polyester" autoFocus />
+                            <Input value={editedContent as string} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., Cotton, Leather, Recycled Polyester" autoFocus />
                             <div className="flex gap-2"><Button onClick={handleEditSave} size="sm">Save</Button><Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button></div>
                         </div>
                     ) : (
@@ -340,7 +340,7 @@ const ProductPlanCard: React.FC<ProductPlanCardProps> = ({
                         </div>
                         {editingField === 'dimensions' ? (
                             <div className="space-y-2">
-                                <Input value={editedContent} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., 15cm x 10cm x 5cm" autoFocus />
+                                <Input value={editedContent as string} onChange={(e) => setEditedContent(e.target.value)} placeholder="e.g., 15cm x 10cm x 5cm" autoFocus />
                                 <div className="flex gap-2"><Button onClick={handleEditSave} size="sm">Save</Button><Button onClick={handleEditCancel} variant="outline" size="sm">Cancel</Button></div>
                             </div>
                         ) : (

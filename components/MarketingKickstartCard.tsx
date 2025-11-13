@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { MarketingKickstart, ProductPlan } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
@@ -54,6 +53,9 @@ interface MarketingKickstartCardProps {
 const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketingPlan, productPlan, brandVoice, onUpdate }) => {
   const [copy, copiedId] = useCopyToClipboard();
   const [isRegeneratingEmail, setIsRegeneratingEmail] = useState(false);
+  const [selectedSocialVariations, setSelectedSocialVariations] = useState<Record<number, number>>({});
+  const [selectedAdVariations, setSelectedAdVariations] = useState<Record<number, number>>({});
+  
   const { socialMediaPosts, adCopy, launchEmail } = marketingPlan;
 
   const handleRegenerateEmail = async () => {
@@ -74,26 +76,44 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
     <Card className="w-full animate-fade-in text-left">
       <CardHeader>
         <CardTitle className="text-2xl md:text-3xl">Marketing Kickstart</CardTitle>
-        <CardDescription>AI-generated assets to get you started on your marketing.</CardDescription>
+        <CardDescription>AI-generated assets with multiple variations to get you started.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         {/* Social Media Section */}
         <section>
           <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200">Social Media Posts</h3>
           <div className="space-y-6">
-            {socialMediaPosts.map((post, index) => (
+            {socialMediaPosts.map((post, index) => {
+              const currentVariationIndex = selectedSocialVariations[index] || 0;
+              const currentText = post.postTextVariations[currentVariationIndex] || post.postTextVariations[0];
+              return (
               <div key={index} className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                   <h4 className="font-bold text-slate-900 dark:text-white">{post.platform} Post</h4>
-                  <button
-                    onClick={() => copy(post.postText, `post-${index}`)}
-                    className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                  >
-                    {copiedId === `post-${index}` ? <CheckIcon /> : <ClipboardIcon />}
-                    {copiedId === `post-${index}` ? 'Copied!' : 'Copy Text'}
-                  </button>
+                  <div className="flex items-center gap-4">
+                     {post.postTextVariations && post.postTextVariations.length > 1 && (
+                        <div className="flex items-center p-1 bg-slate-200 dark:bg-slate-700 rounded-lg">
+                            {post.postTextVariations.map((_, vIndex) => (
+                                <button 
+                                    key={vIndex}
+                                    onClick={() => setSelectedSocialVariations(prev => ({ ...prev, [index]: vIndex }))}
+                                    className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${currentVariationIndex === vIndex ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-50' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-50'}`}
+                                >
+                                    Variation {vIndex + 1}
+                                </button>
+                            ))}
+                        </div>
+                      )}
+                    <button
+                        onClick={() => copy(currentText, `post-${index}`)}
+                        className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    >
+                        {copiedId === `post-${index}` ? <CheckIcon /> : <ClipboardIcon />}
+                        {copiedId === `post-${index}` ? 'Copied!' : 'Copy Text'}
+                    </button>
+                  </div>
                 </div>
-                <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 mb-3">{post.postText}</p>
+                <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 mb-3">{currentText}</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {post.hashtags.map(tag => (
                     <span key={tag} className="text-sm text-blue-600 dark:text-blue-400">#{tag}</span>
@@ -101,7 +121,7 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400"><span className="font-semibold">Visual Idea:</span> {post.visualPrompt}</p>
               </div>
-            ))}
+            )})}
           </div>
         </section>
 
@@ -109,13 +129,34 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
         <section>
           <h3 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-200">Ad Copy</h3>
           <div className="space-y-6">
-            {adCopy.map((ad, index) => (
+            {adCopy.map((ad, index) => {
+              if (!ad.variations || ad.variations.length === 0) return null;
+              const currentAdVariationIndex = selectedAdVariations[index] || 0;
+              const currentVariation = ad.variations[currentAdVariationIndex];
+
+              return (
               <div key={index} className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
-                <h4 className="font-bold mb-3 text-slate-900 dark:text-white">{ad.platform}</h4>
+                <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <h4 className="font-bold text-slate-900 dark:text-white">{ad.platform}</h4>
+                     {ad.variations.length > 1 && (
+                        <div className="flex items-center p-1 bg-slate-200 dark:bg-slate-700 rounded-lg">
+                            {ad.variations.map((_, vIndex) => (
+                                <button 
+                                    key={vIndex}
+                                    onClick={() => setSelectedAdVariations(prev => ({...prev, [index]: vIndex}))}
+                                    className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${currentAdVariationIndex === vIndex ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-50' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-50'}`}
+                                >
+                                    Variation {vIndex + 1}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 <div>
                   <h5 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Headlines:</h5>
                   <ul className="list-disc list-inside space-y-1">
-                    {ad.headlines.map((headline, hIndex) => (
+                    {currentVariation.headlines.map((headline, hIndex) => (
                       <li key={hIndex} className="text-slate-700 dark:text-slate-300">{headline}</li>
                     ))}
                   </ul>
@@ -123,7 +164,7 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
                 <div className="mt-4">
                   <h5 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Descriptions:</h5>
                   <ul className="list-disc list-inside space-y-1">
-                    {ad.descriptions.map((desc, dIndex) => (
+                    {currentVariation.descriptions.map((desc, dIndex) => (
                       <li key={dIndex} className="text-slate-700 dark:text-slate-300">{desc}</li>
                     ))}
                   </ul>
@@ -157,7 +198,7 @@ const MarketingKickstartCard: React.FC<MarketingKickstartCardProps> = ({ marketi
                     </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </section>
 

@@ -7,7 +7,7 @@ import { Input } from './ui/Input';
 interface NextStepsCardProps {
   items: NextStepItem[];
   onToggle: (index: number) => void;
-  onAddTask: (text: string, category: string) => void;
+  onAddTask: (text: string, category: string, priority: 'High' | 'Medium' | 'Low') => void;
   onEditTask: (index: number, text: string) => void;
   onDeleteTask: (index: number) => void;
 }
@@ -25,6 +25,7 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
     const [isAdding, setIsAdding] = useState(false);
     const [newTaskText, setNewTaskText] = useState('');
     const [newTaskCategory, setNewTaskCategory] = useState('General');
+    const [newTaskPriority, setNewTaskPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editedText, setEditedText] = useState('');
 
@@ -34,7 +35,9 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
     const taskCategories = ["General", "Sourcing & Production", "Legal & Compliance", "Marketing & Sales", "Launch Prep"];
 
     const groupedItems = useMemo(() => {
+        const priorityOrder: { [key in 'High' | 'Medium' | 'Low']: number } = { 'High': 1, 'Medium': 2, 'Low': 3 };
         const groups: Record<string, { item: NextStepItem, originalIndex: number }[]> = {};
+        
         items.forEach((item, index) => {
             const category = item.category || 'General';
             if (!groups[category]) {
@@ -42,7 +45,16 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
             }
             groups[category].push({ item, originalIndex: index });
         });
-        
+
+        // Sort items within each group by priority
+        for (const category in groups) {
+            groups[category].sort((a, b) => {
+                const priorityA = priorityOrder[a.item.priority] || 4;
+                const priorityB = priorityOrder[b.item.priority] || 4;
+                return priorityA - priorityB;
+            });
+        }
+
         const categoryOrder = ["Sourcing & Production", "Legal & Compliance", "Marketing & Sales", "Launch Prep", "General"];
         const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
             const indexA = categoryOrder.indexOf(a);
@@ -57,10 +69,11 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
 
     const handleAddTask = () => {
         if (newTaskText.trim()) {
-            onAddTask(newTaskText.trim(), newTaskCategory);
+            onAddTask(newTaskText.trim(), newTaskCategory, newTaskPriority);
             setNewTaskText('');
             setIsAdding(false);
             setNewTaskCategory('General');
+            setNewTaskPriority('Medium');
         }
     };
 
@@ -74,6 +87,19 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
             onEditTask(editingIndex, editedText.trim());
             setEditingIndex(null);
             setEditedText('');
+        }
+    };
+    
+    const getPriorityClasses = (priority?: 'High' | 'Medium' | 'Low') => {
+        switch (priority) {
+            case 'High':
+                return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+            case 'Medium':
+                return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
+            case 'Low':
+                return 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300';
+            default:
+                return 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
         }
     };
 
@@ -126,8 +152,13 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
                                             onChange={() => onToggle(originalIndex)}
                                             className="w-5 h-5 text-slate-800 bg-slate-300 border-slate-400 rounded focus:ring-slate-600 dark:focus:ring-slate-400 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 flex-shrink-0"
                                         />
-                                        <label htmlFor={`step-${originalIndex}`} className={`ml-3 flex-grow text-slate-800 dark:text-slate-200 cursor-pointer ${item.completed ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
-                                            {item.text}
+                                        <label htmlFor={`step-${originalIndex}`} className={`ml-3 flex-grow text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-2 ${item.completed ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
+                                            {item.priority && (
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getPriorityClasses(item.priority)}`}>
+                                                    {item.priority}
+                                                </span>
+                                            )}
+                                            <span>{item.text}</span>
                                         </label>
                                         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => handleEditStart(originalIndex, item.text)} className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white" aria-label="Edit task">
@@ -157,6 +188,15 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
                                 autoFocus
                                 className="h-9 flex-grow"
                             />
+                             <select 
+                                value={newTaskPriority} 
+                                onChange={(e) => setNewTaskPriority(e.target.value as 'High' | 'Medium' | 'Low')} 
+                                className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus-visible:ring-slate-500"
+                            >
+                                <option value="High">High Priority</option>
+                                <option value="Medium">Medium Priority</option>
+                                <option value="Low">Low Priority</option>
+                            </select>
                             <select 
                                 value={newTaskCategory} 
                                 onChange={(e) => setNewTaskCategory(e.target.value)} 
@@ -166,7 +206,7 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
                             </select>
                             <div className="flex gap-2">
                                 <Button size="sm" onClick={handleAddTask}>Add</Button>
-                                <Button size="sm" variant="outline" onClick={() => { setIsAdding(false); setNewTaskText(''); setNewTaskCategory('General'); }}>Cancel</Button>
+                                <Button size="sm" variant="outline" onClick={() => { setIsAdding(false); setNewTaskText(''); setNewTaskCategory('General'); setNewTaskPriority('Medium'); }}>Cancel</Button>
                             </div>
                         </div>
                     ) : (

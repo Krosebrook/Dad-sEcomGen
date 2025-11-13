@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
+import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, SeoStrategy, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import PdfExportTemplate from './PdfExportTemplate';
@@ -13,6 +13,7 @@ interface ExportControlsProps {
     marketingPlan: MarketingKickstart | null;
     financials: FinancialProjections | null;
     nextSteps: NextStepItem[] | null;
+    seoStrategy: SeoStrategy | null;
     adCampaigns: AdCampaign[] | null;
     influencerMarketingPlan: InfluencerMarketingPlan | null;
     customerSupportPlaybook: CustomerSupportPlaybook | null;
@@ -33,7 +34,7 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
     const [isExporting, setIsExporting] = useState(false);
 
     const generateMarkdown = () => {
-        const { productPlan, analysis, marketingPlan, financials, nextSteps, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist } = props;
+        const { productPlan, analysis, marketingPlan, financials, nextSteps, seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist } = props;
         let md = `# ${productPlan.productTitle}\n\n`;
 
         // Product Plan
@@ -75,16 +76,48 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `\n`;
         }
 
+        // SEO Strategy
+        if (seoStrategy) {
+            md += `## SEO & Content Strategy\n\n`;
+            md += `**Strategy Summary:**\n${seoStrategy.strategySummary}\n\n`;
+            md += `### Keyword Analysis\n`;
+            md += `| Keyword | Competition | Monthly Searches | Relevance |\n`;
+            md += `|---|---|---|---|\n`;
+            seoStrategy.keywordAnalysis.forEach(kw => {
+                md += `| ${kw.keyword} | ${kw.competition} | ${kw.monthlySearches} | ${kw.relevance} |\n`;
+            });
+            md += `\n`;
+            md += `### Content Angle Ideas\n`;
+            seoStrategy.contentAngleIdeas.forEach(idea => {
+                md += `- **${idea.title}**: ${idea.description}\n`;
+            });
+            md += `\n`;
+        }
+
         // Marketing Kickstart
         if (marketingPlan) {
             md += `## Marketing Kickstart\n\n`;
             md += `### Social Media Posts\n`;
             marketingPlan.socialMediaPosts.forEach(p => {
-                md += `**${p.platform}:**\n${p.postText}\nHashtags: ${p.hashtags.join(' ')}\n\n`;
+                md += `**${p.platform}:**\n`;
+                if(p.postTextVariations) {
+                    p.postTextVariations.forEach((text, i) => {
+                        md += `\n*Variation ${i + 1}:*\n${text}\n`;
+                    });
+                }
+                md += `\nHashtags: ${p.hashtags.join(' ')}\n\n`;
             });
             md += `### Ad Copy\n`;
             marketingPlan.adCopy.forEach(a => {
-                md += `**${a.platform}:**\n- Headlines: ${a.headlines.join(' | ')}\n- Descriptions: ${a.descriptions.join(' | ')}\n\n`;
+                md += `**${a.platform}:**\n`;
+                if(a.variations) {
+                    a.variations.forEach((v, i) => {
+                        md += `- **Variation ${i + 1}**\n`;
+                        md += `  - Headlines: ${v.headlines.join(' | ')}\n`;
+                        md += `  - Descriptions: ${v.descriptions.join(' | ')}\n`;
+                    });
+                }
+                md += `\n`;
             });
             md += `### Launch Email\n`;
             md += `**Subject:** ${marketingPlan.launchEmail.subject}\n**Body:**\n${marketingPlan.launchEmail.body}\n\n`;

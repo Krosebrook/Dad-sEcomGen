@@ -168,26 +168,45 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
                     <Label htmlFor="monthlySales">Estimated Monthly Sales (Units)</Label>
                     <div className="flex items-center gap-4">
                         <Slider
-                            id="monthlySales"
+                            id="monthlySalesSlider"
                             min={0}
                             max={Math.max(500, financials.estimatedMonthlySales * 2)}
                             step={5}
                             value={[financials.estimatedMonthlySales]}
                             onValueChange={(value) => onFinancialsChange({ ...financials, estimatedMonthlySales: value[0] })}
                         />
-                        <span className="font-bold text-lg w-16 text-center">{financials.estimatedMonthlySales}</span>
+                         <Input
+                            id="monthlySales"
+                            type="number"
+                            value={financials.estimatedMonthlySales}
+                            onChange={(e) => onFinancialsChange({ ...financials, estimatedMonthlySales: parseInt(e.target.value, 10) || 0 })}
+                            className="w-24 h-10 font-bold text-lg text-center"
+                            min={0}
+                            step={5}
+                        />
                     </div>
                 </div>
                 <div>
-                    <Label htmlFor="marketingBudget">Monthly Marketing Budget</Label>
-                    <Input
-                        id="marketingBudget"
-                        type="number"
-                        value={financials.monthlyMarketingBudgetCents / 100}
-                        onChange={(e) => handleCentsChange('monthlyMarketingBudgetCents', e.target.value)}
-                        min="0"
-                        step="10"
-                    />
+                    <Label htmlFor="marketingBudget">Monthly Marketing Budget ({currency})</Label>
+                    <div className="flex items-center gap-4">
+                        <Slider
+                            id="marketingBudgetSlider"
+                            min={0}
+                            max={Math.max(5000, (financials.monthlyMarketingBudgetCents / 100) * 2)}
+                            step={50}
+                            value={[financials.monthlyMarketingBudgetCents / 100]}
+                            onValueChange={(value) => onFinancialsChange({ ...financials, monthlyMarketingBudgetCents: value[0] * 100 })}
+                        />
+                        <Input
+                            id="marketingBudget"
+                            type="number"
+                            value={financials.monthlyMarketingBudgetCents / 100}
+                            onChange={(e) => handleCentsChange('monthlyMarketingBudgetCents', e.target.value)}
+                            min="0"
+                            step="10"
+                            className="w-24 h-10 font-bold text-lg text-center"
+                        />
+                    </div>
                 </div>
             </div>
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-6">
