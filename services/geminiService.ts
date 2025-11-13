@@ -552,7 +552,7 @@ Instructions:
     - BAD: "Do marketing."
     - GOOD: "Draft 5 announcement posts for Instagram showcasing the product's unique features, and schedule them to go live on launch day."
 4.  **Categorize and Prioritize Each Step:** For each step, you must assign:
-    - A 'priority' ('High', 'Medium', or 'Low').
+    - A 'priority' ('High', 'Medium', 'Low').
     - A 'category' from this exact list: "Legal & Compliance", "Sourcing & Production", "Marketing & Sales", or "Launch Prep".
 
 Generate the response as a JSON array of objects, ordered by priority.`;

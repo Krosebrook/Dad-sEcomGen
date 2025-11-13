@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { LegalChecklist } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
