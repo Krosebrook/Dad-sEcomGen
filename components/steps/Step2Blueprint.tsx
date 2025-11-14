@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback } from 'react';
 import { ProductPlan, ProductVariant, RegenerateableSection, BrandIdentityKit } from '../../types';
 import { generateLogo, regeneratePlanSection, generateProductPlan, generateBrandIdentity } from '../../services/geminiService';
@@ -118,7 +119,7 @@ const Step2Blueprint: React.FC<Step2BlueprintProps> = ({
 
 
     return (
-        <div className="w-full max-w-4xl space-y-8 animate-fade-in">
+        <div className="w-full max-w-4xl space-y-8">
             <div className="flex justify-end">
                 <Button onClick={onSavePlan} disabled={isPlanSaved} variant={isPlanSaved ? "outline" : "default"} className="px-4 py-2 text-sm">
                     {isPlanSaved ? '✔ Plan Saved' : 'Save Plan'}

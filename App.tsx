@@ -404,103 +404,105 @@ const App: React.FC = () => {
             <main className="flex-grow container mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
                 <ProgressBar currentStep={currentStep} steps={steps} />
                 
-                {currentStep === 1 && (
-                    <Step1Idea
-                        productIdea={productIdea}
-                        onProductIdeaChange={handleProductIdeaChange}
-                        handleGeneratePlan={handleGeneratePlan}
-                        isLoading={isLoading}
-                        inputError={inputError}
-                        handleExampleClick={handleExampleClick}
-                        brandVoice={brandVoice}
-                        setBrandVoice={setBrandVoice}
-                        onShowScout={() => setShowScout(true)}
-                        smartGoals={smartGoals}
-                        onProceedToBlueprint={handleProceedToBlueprint}
-                    />
-                )}
-                {currentStep === 2 && plan && (
-                    <Step2Blueprint
-                        plan={plan}
-                        productIdea={productIdea}
-                        brandVoice={brandVoice}
-                        onPlanChange={updatePlan}
-                        logoImageUrl={logoImageUrl}
-                        setLogoImageUrl={(url) => { setLogoImageUrl(url); onPlanModified(); }}
-                        brandKit={brandKit}
-                        setBrandKit={(kit) => { setBrandKit(kit); onPlanModified(); }}
-                        onSavePlan={handleSavePlan}
-                        isPlanSaved={isPlanSaved}
-                        onNavigateToMarket={() => setCurrentStep(3)}
-                        onBack={() => setCurrentStep(1)}
-                    />
-                )}
-                 {currentStep === 3 && plan && (
-                    <Step3Market
-                        productPlan={plan}
-                        productIdea={productIdea}
-                        brandVoice={brandVoice}
-                        analysis={analysis}
-                        setAnalysis={(a) => { setAnalysis(a); onPlanModified(); }}
-                        swotAnalysis={swotAnalysis}
-                        setSwotAnalysis={(s) => { setSwotAnalysis(s); onPlanModified(); }}
-                        customerPersona={customerPersona}
-                        setCustomerPersona={(p) => { setCustomerPersona(p); onPlanModified(); }}
-                        personaAvatarUrl={personaAvatarUrl}
-                        setPersonaAvatarUrl={(url) => { setPersonaAvatarUrl(url); onPlanModified(); }}
-                        onNavigateToLaunchpad={() => setCurrentStep(4)}
-                        onBack={() => setCurrentStep(2)}
-                    />
-                )}
-                {currentStep === 4 && plan && (
-                    <Step4Launchpad
-                        productPlan={plan}
-                        brandVoice={brandVoice}
-                        competitiveAnalysis={analysis}
-                        customerPersona={customerPersona}
-                        logoImageUrl={logoImageUrl}
-                        marketingPlan={marketingPlan}
-                        setMarketingPlan={setMarketingPlan}
-                        financials={financials}
-                        setFinancials={setFinancials}
-                        nextSteps={nextSteps}
-                        setNextSteps={setNextSteps}
-                        chatHistory={chatHistory}
-                        setChatHistory={setChatHistory}
-                        storefrontMockupUrl={storefrontMockupUrl}
-                        setStorefrontMockupUrl={setStorefrontMockupUrl}
-                        seoStrategy={seoStrategy}
-                        setSeoStrategy={setSeoStrategy}
-                        shopifyIntegration={shopifyIntegration}
-                        setShopifyIntegration={setShopifyIntegration}
-                        supplierQuotes={supplierQuotes}
-                        setSupplierQuotes={setSupplierQuotes}
-                        supplierSuggestions={supplierSuggestions}
-                        setSupplierSuggestions={setSupplierSuggestions}
-                        adCampaigns={adCampaigns}
-                        setAdCampaigns={setAdCampaigns}
-                        influencerMarketingPlan={influencerMarketingPlan}
-                        setInfluencerMarketingPlan={setInfluencerMarketingPlan}
-                        customerSupportPlaybook={customerSupportPlaybook}
-                        setCustomerSupportPlaybook={setCustomerSupportPlaybook}
-                        packagingExperience={packagingExperience}
-                        setPackagingExperience={setPackagingExperience}
-                        legalChecklist={legalChecklist}
-                        setLegalChecklist={setLegalChecklist}
-                        socialMediaCalendar={socialMediaCalendar}
-                        setSocialMediaCalendar={setSocialMediaCalendar}
-                        photographyPlan={photographyPlan}
-                        setPhotographyPlan={setPhotographyPlan}
-                        abTestPlan={abTestPlan}
-                        setAbTestPlan={setAbTestPlan}
-                        emailFunnel={emailFunnel}
-                        setEmailFunnel={setEmailFunnel}
-                        pressRelease={pressRelease}
-                        setPressRelease={setPressRelease}
-                        onPlanModified={onPlanModified}
-                        onBack={() => setCurrentStep(3)}
-                    />
-                )}
+                <div key={currentStep} className="w-full animate-fade-in-up">
+                    {currentStep === 1 && (
+                        <Step1Idea
+                            productIdea={productIdea}
+                            onProductIdeaChange={handleProductIdeaChange}
+                            handleGeneratePlan={handleGeneratePlan}
+                            isLoading={isLoading}
+                            inputError={inputError}
+                            handleExampleClick={handleExampleClick}
+                            brandVoice={brandVoice}
+                            setBrandVoice={setBrandVoice}
+                            onShowScout={() => setShowScout(true)}
+                            smartGoals={smartGoals}
+                            onProceedToBlueprint={handleProceedToBlueprint}
+                        />
+                    )}
+                    {currentStep === 2 && plan && (
+                        <Step2Blueprint
+                            plan={plan}
+                            productIdea={productIdea}
+                            brandVoice={brandVoice}
+                            onPlanChange={updatePlan}
+                            logoImageUrl={logoImageUrl}
+                            setLogoImageUrl={(url) => { setLogoImageUrl(url); onPlanModified(); }}
+                            brandKit={brandKit}
+                            setBrandKit={(kit) => { setBrandKit(kit); onPlanModified(); }}
+                            onSavePlan={handleSavePlan}
+                            isPlanSaved={isPlanSaved}
+                            onNavigateToMarket={() => setCurrentStep(3)}
+                            onBack={() => setCurrentStep(1)}
+                        />
+                    )}
+                     {currentStep === 3 && plan && (
+                        <Step3Market
+                            productPlan={plan}
+                            productIdea={productIdea}
+                            brandVoice={brandVoice}
+                            analysis={analysis}
+                            setAnalysis={(a) => { setAnalysis(a); onPlanModified(); }}
+                            swotAnalysis={swotAnalysis}
+                            setSwotAnalysis={(s) => { setSwotAnalysis(s); onPlanModified(); }}
+                            customerPersona={customerPersona}
+                            setCustomerPersona={(p) => { setCustomerPersona(p); onPlanModified(); }}
+                            personaAvatarUrl={personaAvatarUrl}
+                            setPersonaAvatarUrl={(url) => { setPersonaAvatarUrl(url); onPlanModified(); }}
+                            onNavigateToLaunchpad={() => setCurrentStep(4)}
+                            onBack={() => setCurrentStep(2)}
+                        />
+                    )}
+                    {currentStep === 4 && plan && (
+                        <Step4Launchpad
+                            productPlan={plan}
+                            brandVoice={brandVoice}
+                            competitiveAnalysis={analysis}
+                            customerPersona={customerPersona}
+                            logoImageUrl={logoImageUrl}
+                            marketingPlan={marketingPlan}
+                            setMarketingPlan={setMarketingPlan}
+                            financials={financials}
+                            setFinancials={setFinancials}
+                            nextSteps={nextSteps}
+                            setNextSteps={setNextSteps}
+                            chatHistory={chatHistory}
+                            setChatHistory={setChatHistory}
+                            storefrontMockupUrl={storefrontMockupUrl}
+                            setStorefrontMockupUrl={setStorefrontMockupUrl}
+                            seoStrategy={seoStrategy}
+                            setSeoStrategy={setSeoStrategy}
+                            shopifyIntegration={shopifyIntegration}
+                            setShopifyIntegration={setShopifyIntegration}
+                            supplierQuotes={supplierQuotes}
+                            setSupplierQuotes={setSupplierQuotes}
+                            supplierSuggestions={supplierSuggestions}
+                            setSupplierSuggestions={setSupplierSuggestions}
+                            adCampaigns={adCampaigns}
+                            setAdCampaigns={setAdCampaigns}
+                            influencerMarketingPlan={influencerMarketingPlan}
+                            setInfluencerMarketingPlan={setInfluencerMarketingPlan}
+                            customerSupportPlaybook={customerSupportPlaybook}
+                            setCustomerSupportPlaybook={setCustomerSupportPlaybook}
+                            packagingExperience={packagingExperience}
+                            setPackagingExperience={setPackagingExperience}
+                            legalChecklist={legalChecklist}
+                            setLegalChecklist={setLegalChecklist}
+                            socialMediaCalendar={socialMediaCalendar}
+                            setSocialMediaCalendar={setSocialMediaCalendar}
+                            photographyPlan={photographyPlan}
+                            setPhotographyPlan={setPhotographyPlan}
+                            abTestPlan={abTestPlan}
+                            setAbTestPlan={setAbTestPlan}
+                            emailFunnel={emailFunnel}
+                            setEmailFunnel={setEmailFunnel}
+                            pressRelease={pressRelease}
+                            setPressRelease={setPressRelease}
+                            onPlanModified={onPlanModified}
+                            onBack={() => setCurrentStep(3)}
+                        />
+                    )}
+                </div>
             </main>
             <Footer />
             {showVentures && (

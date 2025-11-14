@@ -123,7 +123,7 @@ const Step1Idea: React.FC<Step1IdeaProps> = ({
     );
 
     return (
-        <div className="w-full max-w-4xl text-center animate-fade-in">
+        <div className="w-full max-w-4xl text-center">
             {!isLoading && smartGoals ? renderGoalsReview() : renderInitialForm()}
         </div>
     );

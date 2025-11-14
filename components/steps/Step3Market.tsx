@@ -83,7 +83,7 @@ const Step3Market: React.FC<Step3MarketProps> = ({
 
 
     return (
-        <div className="w-full max-w-4xl space-y-8 animate-fade-in">
+        <div className="w-full max-w-4xl space-y-8">
             {analysisError && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">
                     <p>{analysisError}</p>

@@ -261,11 +261,11 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
 
 
     if (isLoading || isDataMissing) {
-        return <div className="w-full max-w-4xl space-y-8 animate-fade-in"><LoadingSpinner message="Building your advanced launchpad assets..." /></div>;
+        return <div className="w-full max-w-4xl space-y-8"><LoadingSpinner message="Building your advanced launchpad assets..." /></div>;
     }
 
     return (
-        <div className="w-full max-w-4xl space-y-8 animate-fade-in">
+        <div className="w-full max-w-4xl space-y-8">
             {marketingPlan && (
                 <MarketingKickstartCard
                     marketingPlan={marketingPlan}
