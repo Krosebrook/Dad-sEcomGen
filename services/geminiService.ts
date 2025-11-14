@@ -881,13 +881,16 @@ export async function generateLegalChecklist(plan: ProductPlan): Promise<LegalCh
 export async function generateSupplierSuggestions(plan: ProductPlan, persona: CustomerPersona): Promise<SupplierSuggestion[]> {
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a sourcing and supply chain expert for e-commerce businesses. Your response must be a JSON array of potential suppliers.`;
-    const prompt = `Based on the following product, suggest 3 potential types of suppliers.
-    
-    Product Title: "${plan.productTitle}"
-    Primary Materials: "${plan.materials.join(', ')}"
-    Target Audience Background: "${persona.background}"
+    const prompt = `You are a world-class sourcing expert. Your goal is to provide a strategically diverse set of supplier options for a new e-commerce product.
 
-    For each suggested supplier, you MUST provide all of the following fields:
+Based on the following product, suggest 3 **distinct and strategically different types** of potential suppliers. This should give the entrepreneur a diverse range of sourcing options to consider, for example: a bulk overseas manufacturer, a local high-quality artisan, and a specialist in sustainable/niche materials.
+
+Product Information:
+- Product Title: "${plan.productTitle}"
+- Primary Materials: "${plan.materials.join(', ')}"
+- Target Audience Background: "${persona.background}"
+
+For each of the 3 suggested suppliers, you MUST provide all of the following fields:
     - A plausible supplier name.
     - A general location (e.g., 'Vietnam', 'USA - West Coast').
     - A contact website (a link to a major sourcing platform or a manufacturer's domain).
@@ -895,9 +898,9 @@ export async function generateSupplierSuggestions(plan: ProductPlan, persona: Cu
     - An estimated Minimum Order Quantity (MOQ) as an integer.
     - A plausible contact email (e.g., sales@suppliername.com). This field is mandatory.
     - A plausible contact phone number in a standard format. This field is mandatory.
-    - Brief notes on why they are a good fit for this product.
+    - Brief notes on why they represent a distinct strategic option for this product.
 
-    Your response must be a valid JSON array. All fields listed above are required for each supplier object. Do not omit any fields.`;
+Your response must be a valid JSON array. All fields listed above are required for each supplier object. Do not omit any fields.`;
 
     const response = await ai.models.generateContent({
         model,
