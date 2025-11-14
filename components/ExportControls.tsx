@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, SeoStrategy, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
+import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, SeoStrategy, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SocialMediaCalendar, ProductPhotographyPlan, ABTestPlan, EmailFunnel, PressRelease } from '../types';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import PdfExportTemplate from './PdfExportTemplate';
@@ -19,6 +19,11 @@ interface ExportControlsProps {
     customerSupportPlaybook: CustomerSupportPlaybook | null;
     packagingExperience: PackagingExperience | null;
     legalChecklist: LegalChecklist | null;
+    socialMediaCalendar: SocialMediaCalendar | null;
+    photographyPlan: ProductPhotographyPlan | null;
+    abTestPlan: ABTestPlan | null;
+    emailFunnel: EmailFunnel | null;
+    pressRelease: PressRelease | null;
 }
 
 const formatCurrency = (cents: number, currency: string = 'USD') => {
@@ -34,7 +39,7 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
     const [isExporting, setIsExporting] = useState(false);
 
     const generateMarkdown = () => {
-        const { productPlan, analysis, marketingPlan, financials, nextSteps, seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist } = props;
+        const { productPlan, analysis, marketingPlan, financials, nextSteps, seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist, socialMediaCalendar, photographyPlan, abTestPlan, emailFunnel, pressRelease } = props;
         let md = `# ${productPlan.productTitle}\n\n`;
 
         // Product Plan
@@ -122,6 +127,29 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `### Launch Email\n`;
             md += `**Subject:** ${marketingPlan.launchEmail.subject}\n**Body:**\n${marketingPlan.launchEmail.body}\n\n`;
         }
+        
+        // Social Media Calendar
+        if (socialMediaCalendar) {
+            md += `## Social Media Calendar\n\n`;
+            socialMediaCalendar.weeks.forEach(week => {
+                md += `### Week ${week.weekNumber}: ${week.theme}\n`;
+                week.posts.forEach(post => {
+                    md += `- **${post.day} (${post.platform}):** ${post.idea}\n`;
+                });
+                md += `\n`;
+            });
+        }
+        
+        // Email Funnel
+        if (emailFunnel) {
+            md += `## Email Funnel\n\n`;
+            emailFunnel.emails.forEach(email => {
+                md += `### ${email.name}\n`;
+                md += `**Timing:** ${email.timing}\n`;
+                md += `**Subject:** ${email.subject}\n`;
+                md += `**Body:**\n${email.body}\n\n`;
+            });
+        }
 
         // Ad Campaigns
         if (adCampaigns) {
@@ -153,6 +181,28 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `\n`;
         }
         
+        // Photography Plan
+        if (photographyPlan) {
+            md += `## Product Photography Plan\n\n`;
+            photographyPlan.shotList.forEach(shot => {
+                md += `### ${shot.type}: ${shot.description}\n`;
+                md += `**Direction:** ${shot.creativeDirection}\n\n`;
+            });
+        }
+        
+        // A/B Testing
+        if (abTestPlan) {
+            md += `## A/B Testing Ideas\n\n`;
+            abTestPlan.tests.forEach(test => {
+                md += `### Test: ${test.element}\n`;
+                md += `**Hypothesis:** ${test.hypothesis}\n`;
+                test.variations.forEach(v => {
+                    md += `- **${v.name}:** ${v.description}\n`;
+                });
+                md += `\n`;
+            });
+        }
+
         // Financials
         if (financials) {
             md += `## Financial Projections\n\n`;
@@ -196,6 +246,19 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             md += `**Inside Elements:**\n`;
             packagingExperience.insideBoxElements.forEach(el => (md += `- ${el}\n`));
             md += `\n**Sustainability:** ${packagingExperience.sustainabilityNotes}\n\n`;
+        }
+
+        // Press Release
+        if (pressRelease) {
+            md += `## Press Release\n\n`;
+            md += `**FOR IMMEDIATE RELEASE**\n\n`;
+            md += `### ${pressRelease.headline}\n`;
+            md += `#### ${pressRelease.subheadline}\n\n`;
+            md += `${pressRelease.dateline} - ${pressRelease.introduction}\n\n`;
+            md += `${pressRelease.body}\n\n`;
+            md += `**About [Your Company]**\n${pressRelease.boilerplate}\n\n`;
+            md += `**Contact:**\n${pressRelease.contactInfo}\n\n`;
+            md += `###\n\n`;
         }
 
         // Legal

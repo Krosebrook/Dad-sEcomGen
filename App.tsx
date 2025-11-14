@@ -33,6 +33,11 @@ import {
     CustomerSupportPlaybook,
     PackagingExperience,
     LegalChecklist,
+    SocialMediaCalendar,
+    ProductPhotographyPlan,
+    ABTestPlan,
+    EmailFunnel,
+    PressRelease,
 } from './types';
 
 type Theme = 'light' | 'dark';
@@ -71,6 +76,11 @@ const App: React.FC = () => {
     const [customerSupportPlaybook, setCustomerSupportPlaybook] = useState<CustomerSupportPlaybook | null>(null);
     const [packagingExperience, setPackagingExperience] = useState<PackagingExperience | null>(null);
     const [legalChecklist, setLegalChecklist] = useState<LegalChecklist | null>(null);
+    const [socialMediaCalendar, setSocialMediaCalendar] = useState<SocialMediaCalendar | null>(null);
+    const [photographyPlan, setPhotographyPlan] = useState<ProductPhotographyPlan | null>(null);
+    const [abTestPlan, setAbTestPlan] = useState<ABTestPlan | null>(null);
+    const [emailFunnel, setEmailFunnel] = useState<EmailFunnel | null>(null);
+    const [pressRelease, setPressRelease] = useState<PressRelease | null>(null);
 
 
     const [isPlanSaved, setIsPlanSaved] = useState(false);
@@ -138,6 +148,11 @@ const App: React.FC = () => {
         setCustomerSupportPlaybook(null);
         setPackagingExperience(null);
         setLegalChecklist(null);
+        setSocialMediaCalendar(null);
+        setPhotographyPlan(null);
+        setAbTestPlan(null);
+        setEmailFunnel(null);
+        setPressRelease(null);
     };
     
     const onPlanModified = useCallback(() => {
@@ -225,7 +240,12 @@ const App: React.FC = () => {
             influencerMarketingPlan: influencerMarketingPlan ?? undefined,
             customerSupportPlaybook: customerSupportPlaybook ?? undefined,
             packagingExperience: packagingExperience ?? undefined,
-            legalChecklist: legalChecklist ?? undefined
+            legalChecklist: legalChecklist ?? undefined,
+            socialMediaCalendar: socialMediaCalendar ?? undefined,
+            photographyPlan: photographyPlan ?? undefined,
+            abTestPlan: abTestPlan ?? undefined,
+            emailFunnel: emailFunnel ?? undefined,
+            pressRelease: pressRelease ?? undefined
         };
 
         const newVenture: SavedVenture = {
@@ -334,6 +354,11 @@ const App: React.FC = () => {
             setCustomerSupportPlaybook(data.customerSupportPlaybook || null);
             setPackagingExperience(data.packagingExperience || null);
             setLegalChecklist(data.legalChecklist || null);
+            setSocialMediaCalendar(data.socialMediaCalendar || null);
+            setPhotographyPlan(data.photographyPlan || null);
+            setAbTestPlan(data.abTestPlan || null);
+            setEmailFunnel(data.emailFunnel || null);
+            setPressRelease(data.pressRelease || null);
 
             
             setIsPlanSaved(true);
@@ -462,6 +487,16 @@ const App: React.FC = () => {
                         setPackagingExperience={setPackagingExperience}
                         legalChecklist={legalChecklist}
                         setLegalChecklist={setLegalChecklist}
+                        socialMediaCalendar={socialMediaCalendar}
+                        setSocialMediaCalendar={setSocialMediaCalendar}
+                        photographyPlan={photographyPlan}
+                        setPhotographyPlan={setPhotographyPlan}
+                        abTestPlan={abTestPlan}
+                        setAbTestPlan={setAbTestPlan}
+                        emailFunnel={emailFunnel}
+                        setEmailFunnel={setEmailFunnel}
+                        pressRelease={pressRelease}
+                        setPressRelease={setPressRelease}
                         onPlanModified={onPlanModified}
                         onBack={() => setCurrentStep(3)}
                     />

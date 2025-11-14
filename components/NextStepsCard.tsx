@@ -20,6 +20,10 @@ const TrashIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
 );
 
+const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>
+);
+
 
 const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTask, onEditTask, onDeleteTask }) => {
     const [isAdding, setIsAdding] = useState(false);
@@ -28,6 +32,7 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
     const [newTaskPriority, setNewTaskPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editedText, setEditedText] = useState('');
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
     const completedCount = items.filter(item => item.completed).length;
     const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
@@ -90,6 +95,13 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
         }
     };
     
+    const handleToggleCategory = (category: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [category]: !(prev[category] ?? true) // Default to true (expanded)
+        }));
+    };
+
     const getPriorityClasses = (priority?: 'High' | 'Medium' | 'Low') => {
         switch (priority) {
             case 'High':
@@ -125,55 +137,73 @@ const NextStepsCard: React.FC<NextStepsCardProps> = ({ items, onToggle, onAddTas
 
 
                 {/* Checklist */}
-                 <div className="space-y-6">
-                    {groupedItems.map(([category, itemsWithIndices]) => (
-                        <div key={category}>
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{category}</h3>
-                            <div className="space-y-3">
-                                {itemsWithIndices.map(({ item, originalIndex }) => (
-                                    editingIndex === originalIndex ? (
-                                        <div key={originalIndex} className="flex items-center gap-2 p-2 bg-slate-200 dark:bg-slate-800 rounded-lg">
-                                            <Input 
-                                                value={editedText}
-                                                onChange={(e) => setEditedText(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleEditSave()}
-                                                autoFocus
-                                                className="h-9"
-                                            />
-                                            <Button size="sm" onClick={handleEditSave}>Save</Button>
-                                            <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>Cancel</Button>
-                                        </div>
-                                    ) : (
-                                    <div key={originalIndex} className="group flex items-center p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-                                        <input
-                                            id={`step-${originalIndex}`}
-                                            type="checkbox"
-                                            checked={item.completed}
-                                            onChange={() => onToggle(originalIndex)}
-                                            className="w-5 h-5 text-slate-800 bg-slate-300 border-slate-400 rounded focus:ring-slate-600 dark:focus:ring-slate-400 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 flex-shrink-0"
-                                        />
-                                        <label htmlFor={`step-${originalIndex}`} className={`ml-3 flex-grow text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-2 ${item.completed ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
-                                            {item.priority && (
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getPriorityClasses(item.priority)}`}>
-                                                    {item.priority}
-                                                </span>
-                                            )}
-                                            <span>{item.text}</span>
-                                        </label>
-                                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => handleEditStart(originalIndex, item.text)} className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white" aria-label="Edit task">
-                                                <PencilIcon />
-                                            </button>
-                                            <button onClick={() => onDeleteTask(originalIndex)} className="p-1 text-slate-500 hover:text-red-500" aria-label="Delete task">
-                                                <TrashIcon />
-                                            </button>
-                                        </div>
+                 <div className="space-y-2">
+                    {groupedItems.map(([category, itemsWithIndices]) => {
+                        const isExpanded = expandedCategories[category] ?? true;
+                        return (
+                            <div key={category} className="border border-slate-200 dark:border-slate-700 rounded-lg transition-all duration-300">
+                                <div
+                                    className="flex justify-between items-center p-4 cursor-pointer select-none"
+                                    onClick={() => handleToggleCategory(category)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleToggleCategory(category); }}
+                                    aria-expanded={isExpanded}
+                                >
+                                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{category}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-slate-500">{itemsWithIndices.length} items</span>
+                                        <ChevronDownIcon className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                                     </div>
-                                    )
-                                ))}
+                                </div>
+                                {isExpanded && (
+                                    <div className="px-4 pb-4 pt-2 border-t border-slate-200 dark:border-slate-700 space-y-3">
+                                        {itemsWithIndices.map(({ item, originalIndex }) => (
+                                            editingIndex === originalIndex ? (
+                                                <div key={originalIndex} className="flex items-center gap-2 p-2 bg-slate-200 dark:bg-slate-800 rounded-lg">
+                                                    <Input 
+                                                        value={editedText}
+                                                        onChange={(e) => setEditedText(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleEditSave()}
+                                                        autoFocus
+                                                        className="h-9"
+                                                    />
+                                                    <Button size="sm" onClick={handleEditSave}>Save</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => setEditingIndex(null)}>Cancel</Button>
+                                                </div>
+                                            ) : (
+                                            <div key={originalIndex} className="group flex items-center p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                                                <input
+                                                    id={`step-${originalIndex}`}
+                                                    type="checkbox"
+                                                    checked={item.completed}
+                                                    onChange={() => onToggle(originalIndex)}
+                                                    className="w-5 h-5 text-slate-800 bg-slate-300 border-slate-400 rounded focus:ring-slate-600 dark:focus:ring-slate-400 dark:ring-offset-slate-900 focus:ring-2 dark:bg-slate-700 dark:border-slate-600 flex-shrink-0"
+                                                />
+                                                <label htmlFor={`step-${originalIndex}`} className={`ml-3 flex-grow text-slate-800 dark:text-slate-200 cursor-pointer flex items-center gap-2 ${item.completed ? 'line-through text-slate-500 dark:text-slate-400' : ''}`}>
+                                                    {item.priority && (
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getPriorityClasses(item.priority)}`}>
+                                                            {item.priority}
+                                                        </span>
+                                                    )}
+                                                    <span>{item.text}</span>
+                                                </label>
+                                                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEditStart(originalIndex, item.text)} className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white" aria-label="Edit task">
+                                                        <PencilIcon />
+                                                    </button>
+                                                    <button onClick={() => onDeleteTask(originalIndex)} className="p-1 text-slate-500 hover:text-red-500" aria-label="Delete task">
+                                                        <TrashIcon />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            )
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
                 
                  {/* Add Item Section */}

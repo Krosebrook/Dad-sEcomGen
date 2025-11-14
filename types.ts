@@ -239,6 +239,66 @@ export interface SeoStrategy {
     sources?: GroundingSource[];
 }
 
+// Feature 1: Social Media Calendar
+export interface SocialMediaCalendarPost {
+    day: string; // e.g., "Monday"
+    platform: string;
+    idea: string;
+    visualPrompt: string;
+}
+export interface SocialMediaCalendar {
+    weeks: {
+        weekNumber: number;
+        theme: string;
+        posts: SocialMediaCalendarPost[];
+    }[];
+}
+
+// Feature 2: Product Photography Plan
+export interface PhotographyShot {
+    type: 'Studio' | 'Lifestyle' | 'Detail';
+    description: string;
+    creativeDirection: string;
+}
+export interface ProductPhotographyPlan {
+    shotList: PhotographyShot[];
+}
+
+// Feature 3: A/B Testing Ideas
+export interface ABTest {
+    element: string; // e.g., "Add to Cart Button"
+    hypothesis: string;
+    variations: {
+        name: string; // e.g., "Variation A: Green Button"
+        description: string;
+    }[];
+}
+export interface ABTestPlan {
+    tests: ABTest[];
+}
+
+// Feature 4: Email Marketing Funnel
+export interface EmailFunnelItem {
+    name: 'Welcome Email' | 'Abandoned Cart' | 'Post-Purchase Follow-up';
+    subject: string;
+    body: string;
+    timing: string; // e.g., "1 hour after cart abandonment"
+}
+export interface EmailFunnel {
+    emails: EmailFunnelItem[];
+}
+
+// Feature 5: Press Release
+export interface PressRelease {
+    headline: string;
+    subheadline: string;
+    dateline: string; // e.g., "YOUR CITY, STATE – [Date]"
+    introduction: string;
+    body: string;
+    boilerplate: string; // About the company
+    contactInfo: string;
+}
+
 export interface AppData {
     productIdea: string;
     brandVoice: string;
@@ -265,6 +325,11 @@ export interface AppData {
     customerSupportPlaybook?: CustomerSupportPlaybook;
     packagingExperience?: PackagingExperience;
     legalChecklist?: LegalChecklist;
+    socialMediaCalendar?: SocialMediaCalendar;
+    photographyPlan?: ProductPhotographyPlan;
+    abTestPlan?: ABTestPlan;
+    emailFunnel?: EmailFunnel;
+    pressRelease?: PressRelease;
 }
 
 export interface SavedVenture {

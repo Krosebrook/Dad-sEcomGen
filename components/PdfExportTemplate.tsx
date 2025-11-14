@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, SeoStrategy, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist } from '../types';
+import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjections, NextStepItem, SeoStrategy, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SocialMediaCalendar, ProductPhotographyPlan, ABTestPlan, EmailFunnel, PressRelease } from '../types';
 
 interface PdfExportTemplateProps {
     productPlan: ProductPlan;
@@ -14,6 +14,11 @@ interface PdfExportTemplateProps {
     customerSupportPlaybook: CustomerSupportPlaybook | null;
     packagingExperience: PackagingExperience | null;
     legalChecklist: LegalChecklist | null;
+    socialMediaCalendar: SocialMediaCalendar | null;
+    photographyPlan: ProductPhotographyPlan | null;
+    abTestPlan: ABTestPlan | null;
+    emailFunnel: EmailFunnel | null;
+    pressRelease: PressRelease | null;
 }
 
 const formatCurrency = (cents: number, currency: string = 'USD') => {
@@ -34,7 +39,8 @@ const Section: React.FC<{ title: string; children: React.ReactNode; className?: 
 const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
     const {
         productPlan, logoImageUrl, analysis, marketingPlan, financials, nextSteps,
-        seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist
+        seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist,
+        socialMediaCalendar, photographyPlan, abTestPlan, emailFunnel, pressRelease
     } = props;
 
     return (
@@ -134,6 +140,37 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
                 </Section>
             )}
 
+            {socialMediaCalendar && (
+                <Section title="Social Media Calendar" className="break-before-page">
+                    {socialMediaCalendar.weeks.map(week => (
+                        <div key={week.weekNumber} className="mb-4">
+                            <h3 className="text-xl font-semibold mb-2">Week {week.weekNumber}: {week.theme}</h3>
+                            <table className="w-full text-left border-collapse text-sm">
+                                <thead><tr className="bg-gray-100"><th className="p-2">Day</th><th className="p-2">Platform</th><th className="p-2">Idea</th></tr></thead>
+                                <tbody>
+                                    {week.posts.map((post, i) => (
+                                        <tr key={i}><td className="p-2 border">{post.day}</td><td className="p-2 border">{post.platform}</td><td className="p-2 border">{post.idea}</td></tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
+                </Section>
+            )}
+
+            {emailFunnel && (
+                <Section title="Email Marketing Funnel" className="break-before-page">
+                    {emailFunnel.emails.map((email, i) => (
+                        <div key={i} className="mb-6 p-2 border rounded">
+                            <h3 className="text-xl font-semibold">{email.name}</h3>
+                            <p><strong>Timing:</strong> {email.timing}</p>
+                            <p><strong>Subject:</strong> {email.subject}</p>
+                            <div className="mt-2 pt-2 border-t"><p className="whitespace-pre-wrap">{email.body}</p></div>
+                        </div>
+                    ))}
+                </Section>
+            )}
+
              {/* Ad Campaigns */}
             {adCampaigns && (
                 <Section title="Ad Campaign Strategy">
@@ -157,9 +194,8 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
                 </Section>
             )}
 
-            {/* Influencer Marketing */}
             {influencerMarketingPlan && (
-                <Section title="Influencer Marketing Plan">
+                <Section title="Influencer Marketing Plan" className="break-before-page">
                     <p><strong>Target Tiers:</strong> {influencerMarketingPlan.influencerTiers.join(', ')}</p>
                     <p><strong>KPIs to Track:</strong> {influencerMarketingPlan.kpiToTrack.join(', ')}</p>
                     <h3 className="text-xl font-semibold mt-4 mb-2">Outreach Template</h3>
@@ -172,6 +208,31 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
             )}
             
             <div style={{ pageBreakBefore: 'always' }}>
+                {photographyPlan && (
+                    <Section title="Product Photography Plan">
+                        {photographyPlan.shotList.map((shot, i) => (
+                            <div key={i} className="mb-4 p-2 border rounded">
+                                <h3 className="text-lg font-semibold">{shot.type}: {shot.description}</h3>
+                                <p><strong>Direction:</strong> {shot.creativeDirection}</p>
+                            </div>
+                        ))}
+                    </Section>
+                )}
+
+                {abTestPlan && (
+                    <Section title="A/B Testing Ideas">
+                        {abTestPlan.tests.map((test, i) => (
+                            <div key={i} className="mb-4 p-2 border rounded">
+                                <h3 className="text-lg font-semibold">Test: {test.element}</h3>
+                                <p><strong>Hypothesis:</strong> {test.hypothesis}</p>
+                                <ul className="list-disc list-inside pl-4">
+                                    {test.variations.map((v, j) => <li key={j}><strong>{v.name}:</strong> {v.description}</li>)}
+                                </ul>
+                            </div>
+                        ))}
+                    </Section>
+                )}
+
                  {/* Customer Support */}
                 {customerSupportPlaybook && (
                     <Section title="Customer Support Playbook">
@@ -197,6 +258,24 @@ const PdfExportTemplate: React.FC<PdfExportTemplateProps> = (props) => {
                     </Section>
                 )}
             </div>
+
+            {pressRelease && (
+                <Section title="Press Release" className="break-before-page">
+                    <div className="p-2 border rounded font-serif">
+                        <p className="text-center font-bold">FOR IMMEDIATE RELEASE</p>
+                        <h3 className="text-2xl font-bold text-center mt-4">{pressRelease.headline}</h3>
+                        <p className="text-lg text-center text-gray-600 mb-4">{pressRelease.subheadline}</p>
+                        <p className="text-sm font-semibold">{pressRelease.dateline}</p>
+                        <p className="whitespace-pre-wrap mt-2">{pressRelease.introduction}</p>
+                        <p className="whitespace-pre-wrap mt-2">{pressRelease.body}</p>
+                        <h4 className="font-bold mt-4">About [Your Company]</h4>
+                        <p className="text-sm whitespace-pre-wrap">{pressRelease.boilerplate}</p>
+                        <h4 className="font-bold mt-4">Contact:</h4>
+                        <p className="text-sm whitespace-pre-wrap">{pressRelease.contactInfo}</p>
+                        <p className="text-center font-bold mt-4">###</p>
+                    </div>
+                </Section>
+            )}
 
             <div style={{ pageBreakBefore: 'always' }}>
                 {/* Financials */}

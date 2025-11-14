@@ -22,7 +22,12 @@ import {
     CustomerSupportPlaybook,
     PackagingExperience,
     LegalChecklist,
-    SupplierSuggestion
+    SupplierSuggestion,
+    SocialMediaCalendar,
+    ProductPhotographyPlan,
+    ABTestPlan,
+    EmailFunnel,
+    PressRelease
 } from '../types';
 
 // FIX: Initialize the GoogleGenAI client.
@@ -530,9 +535,9 @@ Provide all monetary values in cents.`;
 }
 
 export async function generateNextSteps(plan: ProductPlan, brandVoice: string): Promise<NextStepItem[]> {
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a business mentor with a ${brandVoice} tone. Create a checklist as a JSON array of objects.`;
-    const prompt = `You are creating a launch checklist for an e-commerce entrepreneur. It is absolutely critical that every step is specific, actionable, and directly helpful. Avoid generic advice.
+    const prompt = `You are creating a launch checklist for an e-commerce entrepreneur. It is absolutely critical that every step is specific, actionable, and directly helpful. Avoid generic advice. The steps MUST be tailored specifically to this product and its unique characteristics.
 
 Product Information for Context:
 - Product Name: "${plan.productTitle}"
@@ -562,6 +567,7 @@ Generate the response as a JSON array of objects, ordered by priority.`;
         contents: prompt,
         config: {
             systemInstruction,
+            temperature: 0.7,
             responseMimeType: 'application/json',
             responseSchema: {
                 type: Type.ARRAY,
@@ -921,5 +927,213 @@ export async function generateSupplierSuggestions(plan: ProductPlan, persona: Cu
 
     const parsed = parseJson<SupplierSuggestion[]>(response.text);
     if (!parsed) throw new Error("Failed to generate supplier suggestions");
+    return parsed;
+}
+
+// NEW FEATURES
+export async function generateSocialMediaCalendar(plan: ProductPlan, persona: CustomerPersona, brandVoice: string): Promise<SocialMediaCalendar> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a social media manager with a ${brandVoice} tone. Your response must be a single JSON object.`;
+    const prompt = `Create a 4-week social media calendar for the launch of "${plan.productTitle}". Target the persona "${persona.name}".
+    For each week, define a theme (e.g., "Teaser Week", "Launch Week", "User-Generated Content").
+    For each week, provide 3-4 daily post ideas, specifying the platform (Instagram, Facebook, X), a creative idea, and a visual prompt.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    weeks: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                weekNumber: { type: Type.INTEGER },
+                                theme: { type: Type.STRING },
+                                posts: {
+                                    type: Type.ARRAY,
+                                    items: {
+                                        type: Type.OBJECT,
+                                        properties: {
+                                            day: { type: Type.STRING },
+                                            platform: { type: Type.STRING },
+                                            idea: { type: Type.STRING },
+                                            visualPrompt: { type: Type.STRING },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<SocialMediaCalendar>(response.text);
+    if (!parsed) throw new Error("Failed to generate social media calendar");
+    return parsed;
+}
+
+export async function generatePhotographyPlan(plan: ProductPlan, brandVoice: string): Promise<ProductPhotographyPlan> {
+    const model = 'gemini-2.5-flash';
+    const systemInstruction = `You are a professional product photographer and art director with a ${brandVoice} tone. Your response must be a single JSON object.`;
+    const prompt = `Create a product photography shot list for "${plan.productTitle}". Provide 5-7 distinct shots covering 'Studio', 'Lifestyle', and 'Detail' types. For each shot, give a clear description and creative direction.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    shotList: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                type: { type: Type.STRING, description: "Enum: 'Studio', 'Lifestyle', 'Detail'" },
+                                description: { type: Type.STRING },
+                                creativeDirection: { type: Type.STRING },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<ProductPhotographyPlan>(response.text);
+    if (!parsed) throw new Error("Failed to generate photography plan");
+    return parsed;
+}
+
+export async function generateABTestingIdeas(plan: ProductPlan, persona: CustomerPersona): Promise<ABTestPlan> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a conversion rate optimization (CRO) expert. Your response must be a single JSON object.`;
+    const prompt = `Generate 3 high-impact A/B testing ideas for the product page of "${plan.productTitle}", targeting the persona "${persona.name}". For each test, specify the element to test, a clear hypothesis, and two variations (A and B).`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    tests: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                element: { type: Type.STRING },
+                                hypothesis: { type: Type.STRING },
+                                variations: {
+                                    type: Type.ARRAY,
+                                    items: {
+                                        type: Type.OBJECT,
+                                        properties: {
+                                            name: { type: Type.STRING },
+                                            description: { type: Type.STRING },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<ABTestPlan>(response.text);
+    if (!parsed) throw new Error("Failed to generate A/B testing ideas");
+    return parsed;
+}
+
+export async function generateEmailFunnel(plan: ProductPlan, persona: CustomerPersona, brandVoice: string): Promise<EmailFunnel> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are an expert email marketer with a ${brandVoice} tone. Your response must be a single JSON object.`;
+    const prompt = `Create an automated email marketing funnel for "${plan.productTitle}" targeting "${persona.name}". The funnel should include:
+1. A Welcome Email for new subscribers.
+2. An Abandoned Cart recovery email.
+3. A Post-Purchase Follow-up email.
+For each email, provide a catchy subject line, the full email body, and the optimal timing for it to be sent.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    emails: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                name: { type: Type.STRING, description: "Enum: 'Welcome Email', 'Abandoned Cart', 'Post-Purchase Follow-up'" },
+                                subject: { type: Type.STRING },
+                                body: { type: Type.STRING },
+                                timing: { type: Type.STRING },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<EmailFunnel>(response.text);
+    if (!parsed) throw new Error("Failed to generate email funnel");
+    return parsed;
+}
+
+export async function generatePressRelease(plan: ProductPlan, brandVoice: string): Promise<PressRelease> {
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a public relations professional with a ${brandVoice} tone, but ensure the final output is professional and adheres to standard press release format. Your response must be a single JSON object.`;
+    const prompt = `Write a press release for the launch of a new product: "${plan.productTitle}".
+Product description for context: "${plan.description}".
+The press release needs to include:
+- A compelling headline.
+- An informative subheadline.
+- A dateline (use placeholders for city, state, date).
+- A concise introduction (paragraph 1).
+- A detailed body (2-3 paragraphs) highlighting the product's features, benefits, and target audience.
+- A company boilerplate (a short "About Us" section).
+- Contact information (use placeholders).`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    headline: { type: Type.STRING },
+                    subheadline: { type: Type.STRING },
+                    dateline: { type: Type.STRING },
+                    introduction: { type: Type.STRING },
+                    body: { type: Type.STRING },
+                    boilerplate: { type: Type.STRING },
+                    contactInfo: { type: Type.STRING },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<PressRelease>(response.text);
+    if (!parsed) throw new Error("Failed to generate press release");
     return parsed;
 }
