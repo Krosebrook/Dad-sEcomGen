@@ -5,6 +5,7 @@ import { Input } from './ui/Input';
 import { Label } from './ui/Label';
 import { Slider } from './ui/Slider';
 import { Button } from './ui/Button';
+import { FinancialChart } from './FinancialChart';
 
 interface FinancialProjectionsCardProps {
   financials: FinancialProjections;
@@ -321,6 +322,11 @@ const FinancialProjectionsCard: React.FC<FinancialProjectionsCardProps> = ({ fin
                 <span className={getProfitColor(calculations.netProfit)}>{calculations.profitMargin.toFixed(1)}%</span>
             </div>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Visual Breakdown</h3>
+          <FinancialChart financials={financials} />
         </div>
       </CardContent>
     </Card>

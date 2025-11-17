@@ -8,6 +8,9 @@ import Step3Market from './components/steps/Step3Market';
 import Step4Launchpad from './components/steps/Step4Launchpad';
 import MyVenturesDashboard from './components/MyVenturesDashboard';
 import ProductScout from './components/ProductScout';
+import { ToastContainer, useToast } from './components/Toast';
+import { useAuth } from './contexts/AuthContext';
+import { ventureService } from './lib/ventureService';
 import { generateProductPlan, generateSmartGoals } from './services/geminiService';
 
 import {
@@ -43,12 +46,16 @@ import {
 type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
+    const { user, loading: authLoading } = useAuth();
+    const toast = useToast();
     const [currentStep, setCurrentStep] = useState(1);
     const [productIdea, setProductIdea] = useState('');
     const [brandVoice, setBrandVoice] = useState('Witty & Humorous Dad');
     const [isLoading, setIsLoading] = useState(false);
     const [inputError, setInputError] = useState<string | null>(null);
     const [theme, setTheme] = useState<Theme>('light');
+    const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
     // State for all data generated throughout the steps
     const [ventureId, setVentureId] = useState<string | null>(null);
@@ -89,10 +96,27 @@ const App: React.FC = () => {
     const [showScout, setShowScout] = useState(false);
 
     useEffect(() => {
-        const ventures = localStorage.getItem('dad-ecommerce-ventures');
-        if (ventures) {
-            setSavedVentures(JSON.parse(ventures));
-        }
+        const loadVentures = async () => {
+            if (user) {
+                try {
+                    const ventures = await ventureService.getAllVentures();
+                    setSavedVentures(ventures);
+                } catch (error) {
+                    console.error('Failed to load ventures:', error);
+                    const localVentures = localStorage.getItem('dad-ecommerce-ventures');
+                    if (localVentures) {
+                        setSavedVentures(JSON.parse(localVentures));
+                    }
+                }
+            } else {
+                const localVentures = localStorage.getItem('dad-ecommerce-ventures');
+                if (localVentures) {
+                    setSavedVentures(JSON.parse(localVentures));
+                }
+            }
+        };
+
+        loadVentures();
 
         const savedTheme = localStorage.getItem('theme') as Theme || 'light';
         setTheme(savedTheme);
@@ -101,8 +125,7 @@ const App: React.FC = () => {
         } else {
             document.documentElement.classList.remove('dark');
         }
-
-    }, []);
+    }, [user]);
 
     const toggleTheme = () => {
         setTheme(prevTheme => {
@@ -229,7 +252,7 @@ const App: React.FC = () => {
         setPriceHistory(newHistory);
     };
     
-    const handleSavePlan = () => {
+    const handleSavePlan = async () => {
         if (!ventureId || !plan) return;
 
         const currentAppData: AppData = {
@@ -255,16 +278,61 @@ const App: React.FC = () => {
             data: currentAppData
         };
 
-        const updatedVentures = savedVentures.filter(v => v.id !== ventureId);
-        setSavedVentures([...updatedVentures, newVenture]);
-        localStorage.setItem('dad-ecommerce-ventures', JSON.stringify([...updatedVentures, newVenture]));
-        setIsPlanSaved(true);
+        try {
+            if (user) {
+                const isNew = !savedVentures.find(v => v.id === ventureId);
+                if (isNew) {
+                    await ventureService.createVenture(
+                        newVenture.name,
+                        productIdea,
+                        brandVoice,
+                        currentAppData
+                    );
+                    toast.success('Venture created successfully!');
+                } else {
+                    await ventureService.updateVenture(ventureId, newVenture.name, currentAppData);
+                    toast.success('Venture saved successfully!');
+                }
+                const updatedVentures = await ventureService.getAllVentures();
+                setSavedVentures(updatedVentures);
+            } else {
+                const updatedVentures = savedVentures.filter(v => v.id !== ventureId);
+                setSavedVentures([...updatedVentures, newVenture]);
+                localStorage.setItem('dad-ecommerce-ventures', JSON.stringify([...updatedVentures, newVenture]));
+                toast.success('Venture saved locally!');
+            }
+            setIsPlanSaved(true);
+            setLastSaved(new Date());
+        } catch (error) {
+            console.error('Failed to save venture:', error);
+            toast.error('Failed to save venture. Please try again.');
+            const updatedVentures = savedVentures.filter(v => v.id !== ventureId);
+            setSavedVentures([...updatedVentures, newVenture]);
+            localStorage.setItem('dad-ecommerce-ventures', JSON.stringify([...updatedVentures, newVenture]));
+        }
     };
 
-    const loadVenture = (ventureId: string) => {
-        const ventureToLoad = savedVentures.find(v => v.id === ventureId);
-        if (ventureToLoad) {
-            const { data } = ventureToLoad;
+    useEffect(() => {
+        if (!autoSaveEnabled || !ventureId || !plan) return;
+
+        const autoSaveTimer = setTimeout(() => {
+            handleSavePlan();
+        }, 30000);
+
+        return () => clearTimeout(autoSaveTimer);
+    }, [plan, logoImageUrl, brandKit, analysis, swotAnalysis, customerPersona, marketingPlan, financials, nextSteps]);
+
+    const loadVenture = async (ventureIdToLoad: string) => {
+        try {
+            let ventureToLoad: SavedVenture | null = null;
+            if (user) {
+                ventureToLoad = await ventureService.getVenture(ventureIdToLoad);
+            } else {
+                ventureToLoad = savedVentures.find(v => v.id === ventureIdToLoad) || null;
+            }
+
+            if (ventureToLoad) {
+                const { data } = ventureToLoad;
             setVentureId(ventureToLoad.id);
             setVentureName(ventureToLoad.name);
             setProductIdea(data.productIdea);
@@ -360,28 +428,57 @@ const App: React.FC = () => {
             setEmailFunnel(data.emailFunnel || null);
             setPressRelease(data.pressRelease || null);
 
-            
-            setIsPlanSaved(true);
-            setCurrentStep(2); // Go to blueprint step after loading
-            setShowVentures(false);
+
+                setIsPlanSaved(true);
+                setCurrentStep(2);
+                setShowVentures(false);
+                toast.success(`Loaded venture: ${ventureToLoad.name}`);
+            }
+        } catch (error) {
+            console.error('Failed to load venture:', error);
+            toast.error('Failed to load venture. Please try again.');
         }
     };
     
-    const renameVenture = (ventureId: string, newName: string) => {
-        const updatedVentures = savedVentures.map(v => v.id === ventureId ? { ...v, name: newName, lastModified: new Date().toISOString() } : v);
-        setSavedVentures(updatedVentures);
-        localStorage.setItem('dad-ecommerce-ventures', JSON.stringify(updatedVentures));
-        if(ventureId === ventureId) {
-            setVentureName(newName);
+    const renameVenture = async (ventureIdToRename: string, newName: string) => {
+        try {
+            if (user) {
+                await ventureService.renameVenture(ventureIdToRename, newName);
+                const updatedVentures = await ventureService.getAllVentures();
+                setSavedVentures(updatedVentures);
+            } else {
+                const updatedVentures = savedVentures.map(v => v.id === ventureIdToRename ? { ...v, name: newName, lastModified: new Date().toISOString() } : v);
+                setSavedVentures(updatedVentures);
+                localStorage.setItem('dad-ecommerce-ventures', JSON.stringify(updatedVentures));
+            }
+            if (ventureId === ventureIdToRename) {
+                setVentureName(newName);
+            }
+            toast.success('Venture renamed successfully!');
+        } catch (error) {
+            console.error('Failed to rename venture:', error);
+            toast.error('Failed to rename venture. Please try again.');
         }
     };
 
-    const deleteVenture = (ventureId: string) => {
-        const updatedVentures = savedVentures.filter(v => v.id !== ventureId);
-        setSavedVentures(updatedVentures);
-        localStorage.setItem('dad-ecommerce-ventures', JSON.stringify(updatedVentures));
-        if (ventureId === ventureId) {
-            resetState();
+    const deleteVenture = async (ventureIdToDelete: string) => {
+        try {
+            if (user) {
+                await ventureService.deleteVenture(ventureIdToDelete);
+                const updatedVentures = await ventureService.getAllVentures();
+                setSavedVentures(updatedVentures);
+            } else {
+                const updatedVentures = savedVentures.filter(v => v.id !== ventureIdToDelete);
+                setSavedVentures(updatedVentures);
+                localStorage.setItem('dad-ecommerce-ventures', JSON.stringify(updatedVentures));
+            }
+            if (ventureId === ventureIdToDelete) {
+                resetState();
+            }
+            toast.success('Venture deleted successfully!');
+        } catch (error) {
+            console.error('Failed to delete venture:', error);
+            toast.error('Failed to delete venture. Please try again.');
         }
     };
 
@@ -395,8 +492,9 @@ const App: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 font-sans">
-            <Header 
-                onShowVentures={() => setShowVentures(true)} 
+            <ToastContainer toasts={toast.toasts} onClose={toast.closeToast} />
+            <Header
+                onShowVentures={() => setShowVentures(true)}
                 hasVentures={savedVentures.length > 0}
                 theme={theme}
                 onToggleTheme={toggleTheme}
