@@ -30,8 +30,13 @@ import {
     PressRelease
 } from '../types';
 
-// FIX: Initialize the GoogleGenAI client.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+if (!apiKey || apiKey === 'your-gemini-api-key-here') {
+  console.warn('Gemini API key is not configured. AI features will not work until you add your API key to the .env file.');
+}
+
+const ai = apiKey && apiKey !== 'your-gemini-api-key-here' ? new GoogleGenAI({ apiKey }) : null;
 
 // Helper to safely parse JSON from model response
 const parseJson = <T>(jsonString: string): T | null => {
@@ -117,9 +122,13 @@ const smartGoalsSchema = {
 
 
 export async function generateProductPlan(productIdea: string, brandVoice: string, existingVariants: ProductVariant[]): Promise<{ plan: ProductPlan, smartGoals: SMARTGoals }> {
+    if (!ai) {
+        throw new Error('Gemini API key is not configured. Please add your API key to the .env file as VITE_GEMINI_API_KEY');
+    }
+
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are an e-commerce expert creating a detailed product plan. The brand voice is "${brandVoice}". Your entire response must be a single JSON object matching the provided schema, and nothing else.`;
-    
+
     let prompt = `Create a comprehensive product plan for: "${productIdea}". Include a compelling product title, slug, a detailed and engaging product description that focuses on the benefits for its target audience, a base price in cents (USD), a base SKU, total stock, at least 3 relevant product variants, marketing tags, a list of primary materials, product dimensions (e.g., "15cm x 10cm x 5cm"), and weight in grams.`;
     if (existingVariants.length > 0) {
         prompt += `\n\nThe user has updated the variants. Please regenerate the plan based on these new variants, updating the total stock and average price accordingly: ${JSON.stringify(existingVariants)}`;
@@ -154,10 +163,14 @@ export async function generateProductPlan(productIdea: string, brandVoice: strin
 }
 
 export async function generateSmartGoals(productIdea: string, brandVoice: string): Promise<SMARTGoals> {
+    if (!ai) {
+        throw new Error('Gemini API key is not configured. Please add your API key to the .env file as VITE_GEMINI_API_KEY');
+    }
+
     const model = 'gemini-2.5-pro';
     const systemInstruction = `You are a business strategist creating S.M.A.R.T. goals for a new e-commerce venture. The brand voice is "${brandVoice}". Your response must be a JSON object and nothing else.`;
     const prompt = `Generate S.M.A.R.T. goals for a new e-commerce business selling "${productIdea}". The goals should cover the first 6 months of operation. Focus on launch, initial sales, and brand awareness.`;
-    
+
     const response = await ai.models.generateContent({
         model,
         contents: prompt,

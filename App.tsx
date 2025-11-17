@@ -204,7 +204,13 @@ const App: React.FC = () => {
             setSmartGoals(goals);
         } catch (err) {
             console.error(err);
-            setInputError('Failed to generate a plan. Please try again.');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to generate a plan. Please try again.';
+            if (errorMessage.includes('API key')) {
+                setInputError('Gemini API key is not configured. Please add your Google Gemini API key to continue.');
+                toast.error('Please configure your Gemini API key in the .env file');
+            } else {
+                setInputError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -213,20 +219,24 @@ const App: React.FC = () => {
     const handleProceedToBlueprint = async () => {
         setIsLoading(true);
         try {
-            // Passing empty array for initial generation
             const { plan: newPlan, smartGoals: newGoals } = await generateProductPlan(productIdea, brandVoice, []);
-            // Use the goals from the previous step if available, otherwise use newly generated ones
-            setSmartGoals(smartGoals || newGoals); 
+            setSmartGoals(smartGoals || newGoals);
             setPlan(newPlan);
-            
+
             const newVentureId = Date.now().toString();
             setVentureId(newVentureId);
             setVentureName(newPlan.productTitle);
-            
+
             setCurrentStep(2);
         } catch (err) {
             console.error(err);
-            setInputError('Failed to generate the blueprint. Please try again.');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to generate the blueprint. Please try again.';
+            if (errorMessage.includes('API key')) {
+                setInputError('Gemini API key is not configured. Please add your Google Gemini API key to continue.');
+                toast.error('Please configure your Gemini API key in the .env file');
+            } else {
+                setInputError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
