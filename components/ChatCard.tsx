@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 
-// Initialize the AI client once.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = apiKey && apiKey !== 'your-gemini-api-key-here' ? new GoogleGenAI({ apiKey }) : null;
 
 interface ChatCardProps {
   productPlan: ProductPlan;
@@ -25,20 +25,23 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatRef = useRef<Chat | null>(null);
 
-    // Effect to initialize or reset the chat session when the product plan or brand voice changes.
-    // This also handles loading history from a saved venture.
     useEffect(() => {
+        if (!ai) {
+            chatRef.current = null;
+            return;
+        }
+
         const systemInstruction = `You are an AI business consultant with a ${brandVoice} tone. The user is asking questions about their product plan. Keep your answers concise and helpful.
     Product Context:
     - Title: ${productPlan.productTitle}
     - Description: ${productPlan.description}
     - Price: ${(productPlan.priceCents / 100).toFixed(2)} ${productPlan.currency}
     `;
-        
+
         chatRef.current = ai.chats.create({
             model: 'gemini-2.5-flash',
             config: { systemInstruction },
-            history: history, // Load existing history into the chat session
+            history: history,
         });
     }, [productPlan, brandVoice, history]);
 
@@ -99,7 +102,12 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
             <CardContent>
                 <div className="h-80 flex flex-col bg-slate-100 dark:bg-slate-800/50 rounded-lg p-4">
                     <div className="flex-grow overflow-y-auto pr-2 space-y-4">
-                        {history.length === 0 && !isLoading && (
+                        {!ai && (
+                            <div className="h-full flex items-center justify-center text-center">
+                                <p className="text-amber-600 dark:text-amber-400 text-sm">Chat is unavailable. Please configure your Gemini API key in the .env file.</p>
+                            </div>
+                        )}
+                        {ai && history.length === 0 && !isLoading && (
                             <div className="h-full flex items-center justify-center text-center">
                                 <p className="text-slate-500">Ask me anything about your plan, like "Suggest some blog post ideas" or "What are some potential risks?"</p>
                             </div>
@@ -125,15 +133,15 @@ const ChatCard: React.FC<ChatCardProps> = ({ productPlan, brandVoice, history, o
                         <div ref={messagesEndRef} />
                     </div>
                     <form onSubmit={handleSendMessage} className="mt-4 flex gap-2">
-                        <Input 
+                        <Input
                             type="text"
                             value={userInput}
                             onChange={(e) => setUserInput(e.target.value)}
-                            placeholder="Ask a follow-up question..."
-                            disabled={isLoading}
+                            placeholder={ai ? "Ask a follow-up question..." : "Chat unavailable - API key needed"}
+                            disabled={isLoading || !ai}
                             className="h-10 flex-grow"
                         />
-                        <Button type="submit" disabled={isLoading || !userInput.trim()} size="sm" className="h-10 w-10 p-0">
+                        <Button type="submit" disabled={isLoading || !userInput.trim() || !ai} size="sm" className="h-10 w-10 p-0">
                            <SendIcon />
                         </Button>
                     </form>
