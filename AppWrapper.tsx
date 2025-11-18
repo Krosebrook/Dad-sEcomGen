@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SplashScene } from './components/storyboard/SplashScene';
 import { AccessibilityPanel } from './components/accessibility/AccessibilityPanel';
 import { registerServiceWorker } from './lib/pwa';
+import { STORAGE_KEYS } from './lib/constants';
 import ErrorBoundary from './components/ErrorBoundary';
 
 export default function AppWrapper() {
@@ -15,7 +16,7 @@ export default function AppWrapper() {
   useEffect(() => {
     registerServiceWorker();
 
-    const hasSeenSplash = sessionStorage.getItem('splash-seen');
+    const hasSeenSplash = sessionStorage.getItem(STORAGE_KEYS.SPLASH_SEEN);
     if (hasSeenSplash) {
       setShowSplash(false);
       setAppReady(true);
@@ -23,7 +24,7 @@ export default function AppWrapper() {
   }, []);
 
   const handleSplashComplete = () => {
-    sessionStorage.setItem('splash-seen', 'true');
+    sessionStorage.setItem(STORAGE_KEYS.SPLASH_SEEN, 'true');
     setShowSplash(false);
     setTimeout(() => setAppReady(true), 100);
   };
