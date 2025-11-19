@@ -1,18 +1,59 @@
 {
   "name": "Dad's E-commerce Plan Generator",
   "short_name": "E-commerce Planner",
-  "description": "AI-powered e-commerce business plan generator with cinematic UI and multi-platform support",
+  "description": "AI-powered e-commerce business plan generator with cinematic UI and multi-platform support. Create comprehensive business plans, market analysis, and launch strategies in minutes.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "any",
+  "dir": "ltr",
+  "lang": "en-US",
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
@@ -21,19 +62,22 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity", "utilities"],
+  "categories": ["business", "productivity", "utilities", "finance"],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "screenshots": [
     {
       "src": "/screenshot-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Main dashboard view"
     },
     {
       "src": "/screenshot-mobile.png",
       "sizes": "390x844",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Mobile view"
     }
   ],
   "shortcuts": [
@@ -50,6 +94,29 @@
       "description": "View saved ventures",
       "url": "/?action=ventures",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Product Scout",
+      "short_name": "Scout",
+      "description": "Discover trending products",
+      "url": "/?action=scout",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+ecommerce",
+      "url": "/?venture=%s"
     }
   ]
 }

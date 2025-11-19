@@ -5,6 +5,7 @@ import { ViewportProvider } from './contexts/ViewportContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SplashScene } from './components/storyboard/SplashScene';
 import { AccessibilityPanel } from './components/accessibility/AccessibilityPanel';
+import { InstallPrompt, OfflineBanner, UpdatePrompt } from './components/pwa';
 import { registerServiceWorker } from './lib/pwa';
 import { STORAGE_KEYS } from './lib/constants';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -37,8 +38,11 @@ export default function AppWrapper() {
             {showSplash && <SplashScene onComplete={handleSplashComplete} />}
             {appReady && (
               <>
+                <OfflineBanner />
+                <UpdatePrompt />
                 <App />
                 <AccessibilityPanel />
+                <InstallPrompt />
               </>
             )}
           </ViewportProvider>
