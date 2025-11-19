@@ -330,6 +330,8 @@ export interface AppData {
     abTestPlan?: ABTestPlan;
     emailFunnel?: EmailFunnel;
     pressRelease?: PressRelease;
+    contentStrategy?: ContentStrategy;
+    productScorecard?: ProductScorecard;
 }
 
 export interface SavedVenture {
@@ -382,4 +384,65 @@ export interface SupplierQuote {
 export interface PriceHistoryPoint {
     date: string; // ISO date string
     priceCents: number;
+}
+
+export interface ContentStrategyItem {
+    title: string;
+    type: 'Blog Post' | 'Video' | 'Infographic' | 'Social Media' | 'Email Campaign';
+    targetKeywords: string[];
+    description: string;
+    publishDate: string;
+    platform: string;
+    status: 'Draft' | 'Scheduled' | 'Published';
+}
+
+export interface ContentStrategy {
+    overview: string;
+    contentPillars: {
+        pillar: string;
+        description: string;
+        topics: string[];
+    }[];
+    contentCalendar: ContentStrategyItem[];
+    distributionChannels: {
+        channel: string;
+        frequency: string;
+        notes: string;
+    }[];
+}
+
+export interface ProductScorecard {
+    overallScore: number;
+    breakdown: {
+        marketOpportunity: {
+            score: number;
+            details: string;
+            strengths: string[];
+            improvements: string[];
+        };
+        competitivePosition: {
+            score: number;
+            details: string;
+            strengths: string[];
+            improvements: string[];
+        };
+        financialViability: {
+            score: number;
+            details: string;
+            strengths: string[];
+            improvements: string[];
+        };
+        executionReadiness: {
+            score: number;
+            details: string;
+            strengths: string[];
+            improvements: string[];
+        };
+    };
+    recommendations: string[];
+    riskFactors: {
+        risk: string;
+        severity: 'Low' | 'Medium' | 'High';
+        mitigation: string;
+    }[];
 }

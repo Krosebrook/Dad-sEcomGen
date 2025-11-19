@@ -41,6 +41,8 @@ import {
     ABTestPlan,
     EmailFunnel,
     PressRelease,
+    ContentStrategy,
+    ProductScorecard,
 } from './types';
 
 type Theme = 'light' | 'dark';
@@ -88,7 +90,8 @@ const App: React.FC = () => {
     const [abTestPlan, setAbTestPlan] = useState<ABTestPlan | null>(null);
     const [emailFunnel, setEmailFunnel] = useState<EmailFunnel | null>(null);
     const [pressRelease, setPressRelease] = useState<PressRelease | null>(null);
-
+    const [contentStrategy, setContentStrategy] = useState<ContentStrategy | null>(null);
+    const [productScorecard, setProductScorecard] = useState<ProductScorecard | null>(null);
 
     const [isPlanSaved, setIsPlanSaved] = useState(false);
     const [savedVentures, setSavedVentures] = useState<SavedVenture[]>([]);
@@ -176,6 +179,8 @@ const App: React.FC = () => {
         setAbTestPlan(null);
         setEmailFunnel(null);
         setPressRelease(null);
+        setContentStrategy(null);
+        setProductScorecard(null);
     };
     
     const onPlanModified = useCallback(() => {
@@ -278,7 +283,9 @@ const App: React.FC = () => {
             photographyPlan: photographyPlan ?? undefined,
             abTestPlan: abTestPlan ?? undefined,
             emailFunnel: emailFunnel ?? undefined,
-            pressRelease: pressRelease ?? undefined
+            pressRelease: pressRelease ?? undefined,
+            contentStrategy: contentStrategy ?? undefined,
+            productScorecard: productScorecard ?? undefined
         };
 
         const newVenture: SavedVenture = {
@@ -437,7 +444,8 @@ const App: React.FC = () => {
             setAbTestPlan(data.abTestPlan || null);
             setEmailFunnel(data.emailFunnel || null);
             setPressRelease(data.pressRelease || null);
-
+            setContentStrategy(data.contentStrategy || null);
+            setProductScorecard(data.productScorecard || null);
 
                 setIsPlanSaved(true);
                 setCurrentStep(2);
@@ -606,6 +614,10 @@ const App: React.FC = () => {
                             setEmailFunnel={setEmailFunnel}
                             pressRelease={pressRelease}
                             setPressRelease={setPressRelease}
+                            contentStrategy={contentStrategy}
+                            setContentStrategy={setContentStrategy}
+                            productScorecard={productScorecard}
+                            setProductScorecard={setProductScorecard}
                             onPlanModified={onPlanModified}
                             onBack={() => setCurrentStep(3)}
                         />

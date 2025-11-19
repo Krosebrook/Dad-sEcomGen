@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // FIX: Correctly import types from the central types file.
-import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, SeoStrategy, ShopifyIntegration, SupplierQuote, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SupplierSuggestion, SocialMediaCalendar, ProductPhotographyPlan, ABTestPlan, EmailFunnel, PressRelease } from '../../types';
-// FIX: Correctly import services from the geminiService file.
-import { generateMarketingPlan, generateFinancialProjections, generateNextSteps, generateStorefrontMockup, generateAdCampaigns, generateInfluencerPlan, generatePackagingExperience, generateLegalChecklist } from '../../services/geminiService';
+import { ProductPlan, MarketingKickstart, FinancialProjections, FinancialScenario, NextStepItem, ChatMessage, CompetitiveAnalysis, CustomerPersona, SeoStrategy, ShopifyIntegration, SupplierQuote, AdCampaign, InfluencerMarketingPlan, CustomerSupportPlaybook, PackagingExperience, LegalChecklist, SupplierSuggestion, SocialMediaCalendar, ProductPhotographyPlan, ABTestPlan, EmailFunnel, PressRelease, ContentStrategy, ProductScorecard } from '../../types';
+import { generateMarketingPlan, generateFinancialProjections, generateNextSteps, generateStorefrontMockup, generateAdCampaigns, generateInfluencerPlan, generatePackagingExperience, generateLegalChecklist, generateContentStrategy, generateProductScorecard } from '../../services/geminiService';
 
 import MarketingKickstartCard from '../MarketingKickstartCard';
 import FinancialProjectionsCard from '../FinancialProjectionsCard';
@@ -23,7 +22,8 @@ import ProductPhotographyCard from '../ProductPhotographyCard';
 import ABTestingCard from '../ABTestingCard';
 import EmailFunnelCard from '../EmailFunnelCard';
 import PressReleaseCard from '../PressReleaseCard';
-
+import ContentStrategyCard from '../ContentStrategyCard';
+import ProductScorecardCard from '../ProductScorecardCard';
 
 import { Button } from '../ui/Button';
 
@@ -91,6 +91,12 @@ interface Step4LaunchpadProps {
     pressRelease: PressRelease | null;
     setPressRelease: React.Dispatch<React.SetStateAction<PressRelease | null>>;
 
+    contentStrategy: ContentStrategy | null;
+    setContentStrategy: React.Dispatch<React.SetStateAction<ContentStrategy | null>>;
+
+    productScorecard: ProductScorecard | null;
+    setProductScorecard: React.Dispatch<React.SetStateAction<ProductScorecard | null>>;
+
     onPlanModified: () => void;
     onBack: () => void;
 }
@@ -132,6 +138,8 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         abTestPlan, setAbTestPlan,
         emailFunnel, setEmailFunnel,
         pressRelease, setPressRelease,
+        contentStrategy, setContentStrategy,
+        productScorecard, setProductScorecard,
         onPlanModified, onBack
     } = props;
 
@@ -225,6 +233,32 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
         }
     }, [productPlan, setFinancials, onPlanModified]);
 
+    const handleGenerateContentStrategy = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const strategy = await generateContentStrategy(productPlan, brandVoice, seoStrategy, customerPersona);
+            setContentStrategy(strategy);
+            onPlanModified();
+        } catch (error) {
+            console.error("Failed to generate content strategy:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [productPlan, brandVoice, seoStrategy, customerPersona, setContentStrategy, onPlanModified]);
+
+    const handleGenerateProductScorecard = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const scorecard = await generateProductScorecard(productPlan, competitiveAnalysis, null, financials, customerPersona);
+            setProductScorecard(scorecard);
+            onPlanModified();
+        } catch (error) {
+            console.error("Failed to generate product scorecard:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [productPlan, competitiveAnalysis, financials, customerPersona, setProductScorecard, onPlanModified]);
+
     const handleToggleNextStep = (index: number) => {
         const newSteps = [...nextSteps];
         newSteps[index].completed = !newSteps[index].completed;
@@ -281,6 +315,20 @@ const Step4Launchpad: React.FC<Step4LaunchpadProps> = (props) => {
             {customerPersona && <SeoStrategyCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} seoStrategy={seoStrategy} setSeoStrategy={setSeoStrategy} onPlanModified={onPlanModified} />}
             {adCampaigns && <AdCampaignGeneratorCard campaigns={adCampaigns} />}
             {influencerMarketingPlan && <InfluencerMarketingCard plan={influencerMarketingPlan} />}
+            <ContentStrategyCard
+                contentStrategy={contentStrategy}
+                onGenerate={handleGenerateContentStrategy}
+                onChange={(strategy) => {
+                    setContentStrategy(strategy);
+                    onPlanModified();
+                }}
+                isLoading={isLoading}
+            />
+            <ProductScorecardCard
+                scorecard={productScorecard}
+                onGenerate={handleGenerateProductScorecard}
+                isLoading={isLoading}
+            />
             <SocialMediaCalendarCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} calendar={socialMediaCalendar} setCalendar={setSocialMediaCalendar} onPlanModified={onPlanModified} />
             <EmailFunnelCard productPlan={productPlan} customerPersona={customerPersona} brandVoice={brandVoice} funnel={emailFunnel} setFunnel={setEmailFunnel} onPlanModified={onPlanModified} />
             <ABTestingCard productPlan={productPlan} customerPersona={customerPersona} testPlan={abTestPlan} setTestPlan={setAbTestPlan} onPlanModified={onPlanModified} />

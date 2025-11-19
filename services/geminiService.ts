@@ -1,9 +1,9 @@
 // FIX: Add necessary imports from @google/genai and other modules.
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { 
-    ProductPlan, 
-    ProductVariant, 
-    RegenerateableSection, 
+import {
+    ProductPlan,
+    ProductVariant,
+    RegenerateableSection,
     SMARTGoals,
     CompetitiveAnalysis,
     SWOTAnalysis,
@@ -27,7 +27,9 @@ import {
     ProductPhotographyPlan,
     ABTestPlan,
     EmailFunnel,
-    PressRelease
+    PressRelease,
+    ContentStrategy,
+    ProductScorecard
 } from '../types';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -1151,5 +1153,209 @@ The press release needs to include:
 
     const parsed = parseJson<PressRelease>(response.text);
     if (!parsed) throw new Error("Failed to generate press release");
+    return parsed;
+}
+
+export async function generateContentStrategy(
+    plan: ProductPlan,
+    brandVoice: string,
+    seoStrategy: SeoStrategy | null,
+    customerPersona: CustomerPersona | null
+): Promise<ContentStrategy> {
+    if (!ai) throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
+
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a content strategist with expertise in ${brandVoice} brand voice. Create comprehensive content strategies that drive engagement and conversions. Your response must be a single JSON object.`;
+
+    const seoContext = seoStrategy ? `SEO Keywords to target: ${seoStrategy.keywordAnalysis.map(k => k.keyword).join(', ')}` : '';
+    const personaContext = customerPersona ? `Target audience: ${customerPersona.name}, ${customerPersona.occupation}. Motivations: ${customerPersona.motivations.join(', ')}` : '';
+
+    const prompt = `Create a comprehensive 90-day content strategy for "${plan.productTitle}".
+Product description: "${plan.description}"
+${seoContext}
+${personaContext}
+
+Generate:
+1. An overview of the content strategy (2-3 sentences)
+2. 3-4 content pillars with descriptions and 5 topic ideas each
+3. A 90-day content calendar with 30 pieces of content including:
+   - Mix of blog posts, videos, infographics, social media posts, and email campaigns
+   - Publish dates spread across 90 days
+   - Target keywords for each piece
+   - Platform recommendations
+   - All items should start with status "Draft"
+4. 4-6 distribution channels with posting frequency and strategy notes
+
+Make the calendar actionable and aligned with the product's value proposition.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    overview: { type: Type.STRING },
+                    contentPillars: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                pillar: { type: Type.STRING },
+                                description: { type: Type.STRING },
+                                topics: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            },
+                        },
+                    },
+                    contentCalendar: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                title: { type: Type.STRING },
+                                type: { type: Type.STRING, description: "Enum: 'Blog Post', 'Video', 'Infographic', 'Social Media', 'Email Campaign'" },
+                                targetKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                description: { type: Type.STRING },
+                                publishDate: { type: Type.STRING },
+                                platform: { type: Type.STRING },
+                                status: { type: Type.STRING, description: "Enum: 'Draft', 'Scheduled', 'Published'" },
+                            },
+                        },
+                    },
+                    distributionChannels: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                channel: { type: Type.STRING },
+                                frequency: { type: Type.STRING },
+                                notes: { type: Type.STRING },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<ContentStrategy>(response.text);
+    if (!parsed) throw new Error("Failed to generate content strategy");
+    return parsed;
+}
+
+export async function generateProductScorecard(
+    plan: ProductPlan,
+    analysis: CompetitiveAnalysis | null,
+    swotAnalysis: SWOTAnalysis | null,
+    financials: FinancialProjections | null,
+    customerPersona: CustomerPersona | null
+): Promise<ProductScorecard> {
+    if (!ai) throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
+
+    const model = 'gemini-2.5-pro';
+    const systemInstruction = `You are a business analyst evaluating product viability. Provide objective, data-driven assessments with specific scores out of 100. Your response must be a single JSON object.`;
+
+    const competitiveContext = analysis ? `Opportunity score: ${analysis.opportunityScore}/100. Competitors: ${analysis.competitors.map(c => c.name).join(', ')}` : 'No competitive analysis available.';
+    const swotContext = swotAnalysis ? `Strengths: ${swotAnalysis.strengths.length}, Weaknesses: ${swotAnalysis.weaknesses.length}, Opportunities: ${swotAnalysis.opportunities.length}, Threats: ${swotAnalysis.threats.length}` : 'No SWOT analysis available.';
+    const financialContext = financials ? `Projected monthly sales: ${financials.estimatedMonthlySales} units, Price: $${(financials.sellingPriceCents / 100).toFixed(2)}` : 'No financial projections available.';
+    const personaContext = customerPersona ? `Target market defined: ${customerPersona.name}` : 'No customer persona defined.';
+
+    const prompt = `Evaluate this product idea comprehensively: "${plan.productTitle}"
+Description: "${plan.description}"
+
+Available data:
+- ${competitiveContext}
+- ${swotContext}
+- ${financialContext}
+- ${personaContext}
+
+Provide scores (0-100) for:
+1. Market Opportunity (demand, market size, growth potential)
+2. Competitive Position (differentiation, barriers to entry, competitive advantage)
+3. Financial Viability (margins, scalability, investment requirements)
+4. Execution Readiness (resources needed, complexity, time to market)
+
+For each category provide:
+- A score out of 100
+- Detailed explanation (2-3 sentences)
+- 3-5 specific strengths
+- 3-5 specific areas for improvement
+
+Calculate an overall score (weighted average: 30% market, 25% competitive, 25% financial, 20% execution).
+
+Include 5-7 strategic recommendations and 3-5 risk factors with severity (Low/Medium/High) and mitigation strategies.`;
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    overallScore: { type: Type.INTEGER },
+                    breakdown: {
+                        type: Type.OBJECT,
+                        properties: {
+                            marketOpportunity: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER },
+                                    details: { type: Type.STRING },
+                                    strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                    improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                },
+                            },
+                            competitivePosition: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER },
+                                    details: { type: Type.STRING },
+                                    strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                    improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                },
+                            },
+                            financialViability: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER },
+                                    details: { type: Type.STRING },
+                                    strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                    improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                },
+                            },
+                            executionReadiness: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    score: { type: Type.INTEGER },
+                                    details: { type: Type.STRING },
+                                    strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                    improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                },
+                            },
+                        },
+                    },
+                    recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    riskFactors: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                risk: { type: Type.STRING },
+                                severity: { type: Type.STRING, description: "Enum: 'Low', 'Medium', 'High'" },
+                                mitigation: { type: Type.STRING },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const parsed = parseJson<ProductScorecard>(response.text);
+    if (!parsed) throw new Error("Failed to generate product scorecard");
     return parsed;
 }
