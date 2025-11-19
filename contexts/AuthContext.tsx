@@ -28,17 +28,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AuthProvider: Initializing...');
     const initializeAuth = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
+      try {
+        console.log('AuthProvider: Getting session...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('AuthProvider: Session retrieved:', currentSession ? 'logged in' : 'not logged in');
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setLoading(false);
+      } catch (error) {
+        console.error('AuthProvider: Error initializing auth:', error);
+        setLoading(false);
+      }
     };
 
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('AuthProvider: Auth state changed:', event);
         (async () => {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
@@ -119,5 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
   };
 
+  console.log('AuthProvider: Rendering, loading:', loading);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

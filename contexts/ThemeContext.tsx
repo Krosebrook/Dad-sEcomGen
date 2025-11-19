@@ -26,6 +26,7 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
+  console.log('ThemeProvider: Initializing...');
   const [variant, setVariantState] = useState<ThemeVariant>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.VARIANT);
     return (stored as ThemeVariant) || 'minimalist';
@@ -56,6 +57,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => createTheme(variant, colorMode));
 
   useEffect(() => {
+    console.log('ThemeProvider: Applying theme variant:', variant, 'mode:', colorMode);
     const newTheme = createTheme(variant, colorMode);
     setTheme(newTheme);
     applyThemeToDocument(newTheme);
@@ -101,6 +103,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     localStorage.setItem(STORAGE_KEYS.ANIMATION_CONFIG, JSON.stringify(newConfig));
   };
 
+  console.log('ThemeProvider: Rendering with theme:', variant, colorMode);
   return (
     <ThemeContext.Provider
       value={{
