@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/safeSupabase';
 import { UserPreferences } from '../types/analytics.types';
 import { ThemeVariant, ColorMode, AnimationSpeed, AvatarPersonality } from '../types/ui.types';
 

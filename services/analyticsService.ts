@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/safeSupabase';
 import { AnalyticsEvent, EventCategory } from '../types/analytics.types';
 
 export const analyticsService = {

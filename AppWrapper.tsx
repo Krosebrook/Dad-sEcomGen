@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import App from './App';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider } from './contexts/SafeThemeContext';
 import { ViewportProvider } from './contexts/ViewportContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SplashScene } from './components/storyboard/SplashScene';
@@ -8,41 +8,82 @@ import { AccessibilityPanel } from './components/accessibility/AccessibilityPane
 import { InstallPrompt, OfflineBanner, UpdatePrompt } from './components/pwa';
 import { registerServiceWorker } from './lib/pwa';
 import { STORAGE_KEYS } from './lib/constants';
-import ErrorBoundary from './components/ErrorBoundary';
+import { validateEnvironment } from './lib/envValidation';
+import ErrorBoundary from './components/SafeErrorBoundary';
 
 export default function AppWrapper() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    const isDev = import.meta.env.DEV;
+    if (isDev) return false;
+
+    try {
+      return !sessionStorage.getItem(STORAGE_KEYS.SPLASH_SEEN);
+    } catch {
+      return false;
+    }
+  });
+
   const [appReady, setAppReady] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
+  const [envWarnings, setEnvWarnings] = useState<string[]>([]);
 
   useEffect(() => {
-    try {
-      console.log('AppWrapper: Initializing...');
-      registerServiceWorker();
+    const initializeApp = async () => {
+      try {
+        console.log('AppWrapper: Starting initialization...');
 
-      const hasSeenSplash = sessionStorage.getItem(STORAGE_KEYS.SPLASH_SEEN);
-      if (hasSeenSplash) {
-        console.log('AppWrapper: Skipping splash (already seen)');
-        setShowSplash(false);
+        const envValidation = validateEnvironment();
+
+        if (!envValidation.isValid) {
+          console.error('AppWrapper: Environment validation failed', envValidation.errors);
+          setInitError(new Error(`Configuration Error: ${envValidation.errors.join(', ')}`));
+          setAppReady(true);
+          return;
+        }
+
+        if (envValidation.warnings.length > 0) {
+          console.warn('AppWrapper: Environment warnings', envValidation.warnings);
+          setEnvWarnings(envValidation.warnings);
+        }
+
+        try {
+          registerServiceWorker();
+          console.log('AppWrapper: Service worker registered');
+        } catch (swError) {
+          console.warn('AppWrapper: Service worker registration failed (non-critical)', swError);
+        }
+
+        if (!showSplash) {
+          console.log('AppWrapper: Splash skipped, app ready');
+          setAppReady(true);
+        } else {
+          console.log('AppWrapper: Showing splash screen');
+        }
+
+      } catch (error) {
+        console.error('AppWrapper: Fatal initialization error:', error);
+        setInitError(error as Error);
         setAppReady(true);
-      } else {
-        console.log('AppWrapper: Showing splash');
       }
-    } catch (error) {
-      console.error('AppWrapper: Initialization error:', error);
-      setInitError(error as Error);
-    }
-  }, []);
+    };
+
+    initializeApp();
+  }, [showSplash]);
 
   const handleSplashComplete = () => {
     try {
       console.log('AppWrapper: Splash complete, loading app...');
-      sessionStorage.setItem(STORAGE_KEYS.SPLASH_SEEN, 'true');
+      try {
+        sessionStorage.setItem(STORAGE_KEYS.SPLASH_SEEN, 'true');
+      } catch (storageError) {
+        console.warn('AppWrapper: Could not save splash state', storageError);
+      }
       setShowSplash(false);
       setTimeout(() => setAppReady(true), 100);
     } catch (error) {
       console.error('AppWrapper: Error completing splash:', error);
-      setInitError(error as Error);
+      setShowSplash(false);
+      setAppReady(true);
     }
   };
 
@@ -53,11 +94,22 @@ export default function AppWrapper() {
           <div className="text-center">
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-              Initialization Error
+              Configuration Error
             </h1>
             <p className="text-slate-600 dark:text-slate-400 mb-6">
               {initError.message}
             </p>
+            <div className="text-left bg-slate-100 dark:bg-slate-900 rounded p-4 mb-6">
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-2 font-semibold">
+                To fix this issue:
+              </p>
+              <ol className="text-sm text-slate-600 dark:text-slate-400 list-decimal list-inside space-y-1">
+                <li>Check your .env file exists in the project root</li>
+                <li>Ensure VITE_SUPABASE_URL is set correctly</li>
+                <li>Ensure VITE_SUPABASE_ANON_KEY is set correctly</li>
+                <li>Restart the development server after making changes</li>
+              </ol>
+            </div>
             <button
               onClick={() => window.location.reload()}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -71,7 +123,7 @@ export default function AppWrapper() {
   }
 
   return (
-    <ErrorBoundary>
+    <SafeErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
           <ViewportProvider>
@@ -88,6 +140,6 @@ export default function AppWrapper() {
           </ViewportProvider>
         </ThemeProvider>
       </AuthProvider>
-    </ErrorBoundary>
+    </SafeErrorBoundary>
   );
 }

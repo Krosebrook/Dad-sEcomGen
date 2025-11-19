@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './safeSupabase';
 import { AppData, SavedVenture } from '../types';
 
 export interface VentureWithData extends SavedVenture {
