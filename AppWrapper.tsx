@@ -9,7 +9,7 @@ import { InstallPrompt, OfflineBanner, UpdatePrompt } from './components/pwa';
 import { registerServiceWorker } from './lib/pwa';
 import { STORAGE_KEYS } from './lib/constants';
 import { validateEnvironment } from './lib/envValidation';
-import ErrorBoundary from './components/SafeErrorBoundary';
+import { SafeErrorBoundary } from './components/SafeErrorBoundary';
 
 export default function AppWrapper() {
   const [showSplash, setShowSplash] = useState(() => {

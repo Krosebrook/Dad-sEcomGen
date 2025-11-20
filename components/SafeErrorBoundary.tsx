@@ -130,4 +130,5 @@ class SafeErrorBoundary extends Component<Props, State> {
   }
 }
 
+export { SafeErrorBoundary };
 export default SafeErrorBoundary;
