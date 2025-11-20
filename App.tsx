@@ -9,6 +9,7 @@ import Step4Launchpad from './components/steps/Step4Launchpad';
 import MyVenturesDashboard from './components/MyVenturesDashboard';
 import ProductScout from './components/ProductScout';
 import { ToastContainer, useToast } from './components/Toast';
+import { StoryboardDemo } from './components/storyboard/StoryboardDemo';
 import { useAuth } from './contexts/AuthContext';
 import { ventureService } from './lib/ventureService';
 import { generateProductPlan, generateSmartGoals } from './services/geminiService';
@@ -97,6 +98,7 @@ const App: React.FC = () => {
     const [savedVentures, setSavedVentures] = useState<SavedVenture[]>([]);
     const [showVentures, setShowVentures] = useState(false);
     const [showScout, setShowScout] = useState(false);
+    const [showStoryboard, setShowStoryboard] = useState(false);
 
     useEffect(() => {
         const loadVentures = async () => {
@@ -516,6 +518,7 @@ const App: React.FC = () => {
                 hasVentures={savedVentures.length > 0}
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                onShowStoryboard={() => setShowStoryboard(true)}
             />
             <main className="flex-grow container mx-auto px-4 py-8 md:py-12 flex flex-col items-center">
                 <ProgressBar currentStep={currentStep} steps={steps} />
@@ -639,6 +642,17 @@ const App: React.FC = () => {
                     onClose={() => setShowScout(false)}
                     onSelectIdea={handleSelectScoutIdea}
                 />
+            )}
+            {showStoryboard && (
+                <div className="fixed inset-0 z-[9999] bg-slate-900">
+                    <button
+                        onClick={() => setShowStoryboard(false)}
+                        className="fixed top-4 right-4 z-[10000] px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all hover:scale-105 active:scale-95 shadow-xl"
+                    >
+                        ✕ Close Storyboard
+                    </button>
+                    <StoryboardDemo autoPlay={false} startScene="splash" />
+                </div>
             )}
         </div>
     );

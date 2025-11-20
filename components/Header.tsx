@@ -7,6 +7,7 @@ interface HeaderProps {
     hasVentures: boolean;
     theme: 'light' | 'dark';
     onToggleTheme: () => void;
+    onShowStoryboard?: () => void;
 }
 
 const SunIcon = () => (
@@ -17,7 +18,7 @@ const MoonIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
 );
 
-const Header: React.FC<HeaderProps> = ({ onShowVentures, hasVentures, theme, onToggleTheme }) => {
+const Header: React.FC<HeaderProps> = ({ onShowVentures, hasVentures, theme, onToggleTheme, onShowStoryboard }) => {
   const { user, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -36,6 +37,16 @@ const Header: React.FC<HeaderProps> = ({ onShowVentures, hasVentures, theme, onT
             Dad's E-commerce Plan Generator
           </h1>
           <div className="flex items-center gap-4">
+            {onShowStoryboard && (
+              <button
+                onClick={onShowStoryboard}
+                className="relative inline-flex items-center justify-center rounded-md text-sm font-medium transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-1.5 shadow-lg"
+                title="View UI/UX Storyboard Demo"
+              >
+                <span className="text-base mr-1.5">🎬</span>
+                Storyboard
+              </button>
+            )}
             {hasVentures && (
               <button
                 onClick={onShowVentures}

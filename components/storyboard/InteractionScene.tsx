@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/SafeThemeContext';
+import { Avatar } from '../avatar/Avatar';
 
 interface InteractionSceneProps {
   isActive?: boolean;
@@ -10,6 +11,15 @@ export function InteractionScene({ isActive = false }: InteractionSceneProps) {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [draggedItem, setDraggedItem] = useState<number | null>(null);
   const [dropZone, setDropZone] = useState<'todo' | 'progress' | 'done'>('todo');
+  const [showGuide, setShowGuide] = useState(true);
+  const [interactionCount, setInteractionCount] = useState(0);
+
+  useEffect(() => {
+    if (isActive && interactionCount === 0) {
+      const timer = setTimeout(() => setShowGuide(false), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [isActive, interactionCount]);
 
   const filters = [
     { id: 'all', label: 'All Tasks', count: 15 },
@@ -32,12 +42,57 @@ export function InteractionScene({ isActive = false }: InteractionSceneProps) {
   const handleDrop = (zone: 'todo' | 'progress' | 'done') => {
     setDropZone(zone);
     setDraggedItem(null);
+    setInteractionCount((prev) => prev + 1);
+    if (showGuide) setShowGuide(false);
+  };
+
+  const handleFilterClick = (filterId: string) => {
+    setActiveFilter(filterId);
+    setInteractionCount((prev) => prev + 1);
+    if (showGuide) setShowGuide(false);
   };
 
   if (!isActive) return null;
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 space-y-6">
+    <div id="interaction-scene" className="w-full max-w-7xl mx-auto p-6 space-y-6 relative">
+      {showGuide && (
+        <div
+          className="absolute top-4 right-4 z-10 max-w-sm animate-fade-in-right"
+          style={{ pointerEvents: 'none' }}
+        >
+          <div
+            className="p-4 rounded-xl shadow-xl"
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.primary,
+              borderWidth: '2px',
+              pointerEvents: 'auto',
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <Avatar
+                personality="expert"
+                expression="explaining"
+                size="small"
+                showBubble={false}
+              />
+              <div className="flex-1">
+                <p className="text-sm" style={{ color: theme.colors.text }}>
+                  Try interacting! Filter tasks or drag cards between columns to see responsive animations.
+                </p>
+                <button
+                  onClick={() => setShowGuide(false)}
+                  className="mt-2 text-xs underline"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="space-y-4">
         <h1 className="text-3xl md:text-4xl font-bold" style={{ color: theme.colors.text }}>
           Interactive Workflow
@@ -47,7 +102,7 @@ export function InteractionScene({ isActive = false }: InteractionSceneProps) {
           {filters.map((filter) => (
             <button
               key={filter.id}
-              onClick={() => setActiveFilter(filter.id)}
+              onClick={() => handleFilterClick(filter.id)}
               className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95"
               style={{
                 backgroundColor:

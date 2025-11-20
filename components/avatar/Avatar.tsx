@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export type AvatarPersonality = 'professional' | 'friendly' | 'expert';
-export type AvatarExpression = 'idle' | 'talking' | 'celebrating' | 'thinking' | 'welcoming';
+export type AvatarExpression = 'idle' | 'talking' | 'celebrating' | 'thinking' | 'welcoming' | 'explaining' | 'excited';
 export type AvatarStyle = 'realistic' | 'stylized';
 
 interface AvatarProps {
@@ -21,18 +21,21 @@ const avatarPersonalities = {
     icon: { realistic: '👨‍💼', stylized: '👔' },
     name: 'Alex',
     greeting: 'Hello! I\'m here to guide you through your entrepreneurial journey.',
+    voice: { pitch: 'medium', speed: 'normal' },
   },
   friendly: {
     color: '#10b981',
     icon: { realistic: '🙂', stylized: '😊' },
     name: 'Sam',
     greeting: 'Hey there! Ready to build something amazing together?',
+    voice: { pitch: 'high', speed: 'fast' },
   },
   expert: {
     color: '#8b5cf6',
     icon: { realistic: '👩‍🎓', stylized: '🎓' },
     name: 'Taylor',
     greeting: 'Greetings! Let\'s leverage data-driven insights for your venture.',
+    voice: { pitch: 'low', speed: 'slow' },
   },
 };
 
@@ -42,6 +45,8 @@ const expressionAnimations = {
   celebrating: 'animate-spin',
   thinking: 'animate-pulse',
   welcoming: 'animate-bounce',
+  explaining: 'animate-pulse',
+  excited: 'animate-bounce',
 };
 
 const sizeClasses = {
@@ -73,6 +78,16 @@ export function Avatar({
 
   const displayMessage = message || personalityConfig.greeting;
   const iconDisplay = personalityConfig.icon[avatarStyle];
+  const [lipSyncPhase, setLipSyncPhase] = useState(0);
+
+  useEffect(() => {
+    if (expression === 'talking' && animationConfig.enabled && !animationConfig.reducedMotion) {
+      const interval = setInterval(() => {
+        setLipSyncPhase((prev) => (prev + 1) % 3);
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, [expression, animationConfig]);
 
   return (
     <div className={`relative inline-flex items-center ${className}`}>
@@ -95,6 +110,31 @@ export function Avatar({
         aria-label={`${personalityConfig.name}, your ${personality} guide`}
       >
         <span className="select-none">{iconDisplay}</span>
+
+        {expression === 'talking' && (
+          <div
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 transition-all duration-200"
+            style={{
+              width: lipSyncPhase === 1 ? '40%' : '30%',
+              height: lipSyncPhase === 1 ? '8px' : '4px',
+              backgroundColor: personalityConfig.color,
+              borderRadius: '50%',
+              opacity: 0.6,
+            }}
+          />
+        )}
+
+        {expression === 'thinking' && (
+          <div className="absolute -top-2 -right-2 animate-bounce">
+            <span className="text-xl">🤔</span>
+          </div>
+        )}
+
+        {expression === 'celebrating' && (
+          <div className="absolute -top-2 -right-2 animate-ping">
+            <span className="text-xl">🎉</span>
+          </div>
+        )}
       </div>
 
       {showBubble && displayMessage && (
