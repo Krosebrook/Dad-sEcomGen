@@ -3,6 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 export type AvatarPersonality = 'professional' | 'friendly' | 'expert';
 export type AvatarExpression = 'idle' | 'talking' | 'celebrating' | 'thinking' | 'welcoming';
+export type AvatarStyle = 'realistic' | 'stylized';
 
 interface AvatarProps {
   personality?: AvatarPersonality;
@@ -11,24 +12,25 @@ interface AvatarProps {
   size?: 'small' | 'medium' | 'large';
   showBubble?: boolean;
   className?: string;
+  style?: AvatarStyle;
 }
 
-const avatarStyles = {
+const avatarPersonalities = {
   professional: {
     color: '#2563eb',
-    icon: '👔',
+    icon: { realistic: '👨‍💼', stylized: '👔' },
     name: 'Alex',
     greeting: 'Hello! I\'m here to guide you through your entrepreneurial journey.',
   },
   friendly: {
     color: '#10b981',
-    icon: '😊',
+    icon: { realistic: '🙂', stylized: '😊' },
     name: 'Sam',
     greeting: 'Hey there! Ready to build something amazing together?',
   },
   expert: {
     color: '#8b5cf6',
-    icon: '🎓',
+    icon: { realistic: '👩‍🎓', stylized: '🎓' },
     name: 'Taylor',
     greeting: 'Greetings! Let\'s leverage data-driven insights for your venture.',
   },
@@ -55,10 +57,11 @@ export function Avatar({
   size = 'medium',
   showBubble = false,
   className = '',
+  style: avatarStyle = 'stylized',
 }: AvatarProps) {
   const { animationConfig } = useTheme();
   const [isAnimating, setIsAnimating] = useState(false);
-  const style = avatarStyles[personality];
+  const personalityConfig = avatarPersonalities[personality];
 
   useEffect(() => {
     if (expression !== 'idle' && animationConfig.enabled && !animationConfig.reducedMotion) {
@@ -68,7 +71,8 @@ export function Avatar({
     }
   }, [expression, animationConfig]);
 
-  const displayMessage = message || style.greeting;
+  const displayMessage = message || personalityConfig.greeting;
+  const iconDisplay = personalityConfig.icon[avatarStyle];
 
   return (
     <div className={`relative inline-flex items-center ${className}`}>
@@ -83,14 +87,14 @@ export function Avatar({
           ${!animationConfig.reducedMotion ? 'hover:scale-110' : ''}
         `}
         style={{
-          backgroundColor: `${style.color}20`,
-          borderColor: style.color,
+          backgroundColor: `${personalityConfig.color}20`,
+          borderColor: personalityConfig.color,
           borderWidth: '3px',
         }}
         role="img"
-        aria-label={`${style.name}, your ${personality} guide`}
+        aria-label={`${personalityConfig.name}, your ${personality} guide`}
       >
-        <span className="select-none">{style.icon}</span>
+        <span className="select-none">{iconDisplay}</span>
       </div>
 
       {showBubble && displayMessage && (
@@ -109,7 +113,7 @@ export function Avatar({
           <div className="flex items-start gap-2">
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">
-                {style.name}
+                {personalityConfig.name}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300">{displayMessage}</p>
             </div>

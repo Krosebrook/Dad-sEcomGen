@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { applyColorblindFilter, applyTextScale, applyHighContrast, applyFocusVisible, ColorblindMode } from '../../lib/accessibility';
 
 export function AccessibilityPanel() {
   const { animationConfig, updateAnimationConfig, colorMode } = useTheme();
   const [textScale, setTextScale] = useState(1);
   const [highContrast, setHighContrast] = useState(false);
   const [focusVisible, setFocusVisible] = useState(true);
+  const [colorblindMode, setColorblindMode] = useState<ColorblindMode>('none');
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.style.fontSize = `${textScale * 16}px`;
+    applyTextScale(textScale);
+  }, [textScale]);
 
-    if (highContrast) {
-      root.classList.add('high-contrast');
-    } else {
-      root.classList.remove('high-contrast');
-    }
+  useEffect(() => {
+    applyHighContrast(highContrast, colorMode === 'dark');
+  }, [highContrast, colorMode]);
 
-    if (focusVisible) {
-      root.classList.add('focus-visible-enabled');
-    } else {
-      root.classList.remove('focus-visible-enabled');
-    }
-  }, [textScale, highContrast, focusVisible]);
+  useEffect(() => {
+    applyFocusVisible(focusVisible);
+  }, [focusVisible]);
+
+  useEffect(() => {
+    applyColorblindFilter(colorblindMode);
+  }, [colorblindMode]);
 
   return (
     <>
@@ -131,6 +132,23 @@ export function AccessibilityPanel() {
                   className="w-5 h-5 rounded"
                 />
               </label>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Colorblind Mode
+                </label>
+                <select
+                  value={colorblindMode}
+                  onChange={(e) => setColorblindMode(e.target.value as ColorblindMode)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  aria-label="Colorblind mode"
+                >
+                  <option value="none">None</option>
+                  <option value="protanopia">Protanopia (Red-Blind)</option>
+                  <option value="deuteranopia">Deuteranopia (Green-Blind)</option>
+                  <option value="tritanopia">Tritanopia (Blue-Blind)</option>
+                </select>
+              </div>
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                 <p className="text-xs text-slate-600 dark:text-slate-400">
