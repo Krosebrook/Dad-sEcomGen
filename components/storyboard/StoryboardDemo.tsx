@@ -6,6 +6,8 @@ import { DashboardScene } from './DashboardScene';
 import { InteractionScene } from './InteractionScene';
 import { CompletionScene } from './CompletionScene';
 import { ThemeVariant } from '../../lib/themes';
+import { EnhancedExportManager } from '../export/EnhancedExportManager';
+import { ExportAnalyticsDashboard } from '../export/ExportAnalyticsDashboard';
 
 type Scene = 'splash' | 'onboarding' | 'dashboard' | 'interaction' | 'completion';
 
@@ -18,6 +20,8 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
   const { theme, setThemeVariant, themeVariant } = useTheme();
   const [currentScene, setCurrentScene] = useState<Scene>(startScene);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [showExport, setShowExport] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const scenes: Scene[] = ['splash', 'onboarding', 'dashboard', 'interaction', 'completion'];
 
@@ -87,7 +91,7 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
           ))}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={cycleTheme}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
@@ -109,32 +113,73 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
           >
             {isPlaying ? 'Pause' : 'Play'}
           </button>
+
+          <button
+            onClick={() => setShowExport(!showExport)}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              backgroundColor: theme.colors.secondary,
+              color: '#ffffff',
+            }}
+          >
+            Export
+          </button>
+
+          <button
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all border-2"
+            style={{
+              backgroundColor: 'transparent',
+              color: theme.colors.text,
+              borderColor: theme.colors.border,
+            }}
+          >
+            Analytics
+          </button>
         </div>
       </div>
 
-      <div className="pt-24">
-        {currentScene === 'splash' && (
-          <SplashScene onComplete={handleSceneComplete} />
+      <div className="pt-24 px-4 pb-20">
+        {showExport && (
+          <div className="mb-6">
+            <EnhancedExportManager
+              elementIds={['splash-scene', 'onboarding-scene', 'dashboard-scene', 'interaction-scene', 'completion-scene']}
+              baseFilename="storyboard-demo"
+              onExportComplete={() => console.log('Storyboard exported!')}
+            />
+          </div>
         )}
 
-        {currentScene === 'onboarding' && (
-          <OnboardingScene onComplete={handleSceneComplete} />
+        {showAnalytics && (
+          <div className="mb-6">
+            <ExportAnalyticsDashboard />
+          </div>
         )}
 
-        {currentScene === 'dashboard' && (
-          <DashboardScene isActive={currentScene === 'dashboard'} />
-        )}
+        <div id={`${currentScene}-scene`}>
+          {currentScene === 'splash' && (
+            <SplashScene onComplete={handleSceneComplete} />
+          )}
 
-        {currentScene === 'interaction' && (
-          <InteractionScene isActive={currentScene === 'interaction'} />
-        )}
+          {currentScene === 'onboarding' && (
+            <OnboardingScene onComplete={handleSceneComplete} />
+          )}
 
-        {currentScene === 'completion' && (
-          <CompletionScene
-            isActive={currentScene === 'completion'}
-            onCallToAction={() => console.log('Export plan')}
-          />
-        )}
+          {currentScene === 'dashboard' && (
+            <DashboardScene isActive={currentScene === 'dashboard'} />
+          )}
+
+          {currentScene === 'interaction' && (
+            <InteractionScene isActive={currentScene === 'interaction'} />
+          )}
+
+          {currentScene === 'completion' && (
+            <CompletionScene
+              isActive={currentScene === 'completion'}
+              onCallToAction={() => console.log('Export plan')}
+            />
+          )}
+        </div>
       </div>
 
       <div

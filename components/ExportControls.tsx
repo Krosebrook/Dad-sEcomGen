@@ -5,6 +5,8 @@ import { ProductPlan, CompetitiveAnalysis, MarketingKickstart, FinancialProjecti
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import PdfExportTemplate from './PdfExportTemplate';
+import { EnhancedExportManager } from './export/EnhancedExportManager';
+import { ExportAnalyticsDashboard } from './export/ExportAnalyticsDashboard';
 
 interface ExportControlsProps {
     productPlan: ProductPlan;
@@ -37,6 +39,8 @@ const formatCurrency = (cents: number, currency: string = 'USD') => {
 const ExportControls: React.FC<ExportControlsProps> = (props) => {
     const [isCopying, setIsCopying] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showAnalytics, setShowAnalytics] = useState(false);
 
     const generateMarkdown = () => {
         const { productPlan, analysis, marketingPlan, financials, nextSteps, seoStrategy, adCampaigns, influencerMarketingPlan, customerSupportPlaybook, packagingExperience, legalChecklist, socialMediaCalendar, photographyPlan, abTestPlan, emailFunnel, pressRelease } = props;
@@ -335,16 +339,33 @@ const ExportControls: React.FC<ExportControlsProps> = (props) => {
             <Card>
                 <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-center gap-4">
                     <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Export Your Plan</h3>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-4">
                         <Button variant="outline" onClick={handleCopyMarkdown} disabled={isCopying}>
                             {isCopying ? 'Copied!' : 'Copy as Markdown'}
                         </Button>
                         <Button onClick={handleExportPdf} disabled={isExporting}>
-                            {isExporting ? 'Exporting...' : 'Export as PDF'}
+                            {isExporting ? 'Exporting...' : 'Quick PDF Export'}
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowAdvanced(!showAdvanced)}>
+                            {showAdvanced ? 'Hide' : 'Show'} Advanced Export
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowAnalytics(!showAnalytics)}>
+                            {showAnalytics ? 'Hide' : 'Show'} Analytics
                         </Button>
                     </div>
                 </CardContent>
             </Card>
+
+            {showAdvanced && (
+                <EnhancedExportManager
+                    elementIds={['pdf-export-template']}
+                    baseFilename={props.productPlan.slug}
+                    onExportComplete={() => console.log('Export completed!')}
+                />
+            )}
+
+            {showAnalytics && <ExportAnalyticsDashboard />}
+
             <div className="hidden">
                  <div id="pdf-export-template" style={{ position: 'absolute', left: '-9999px', top: 0 }}>
                     <PdfExportTemplate {...props} />
