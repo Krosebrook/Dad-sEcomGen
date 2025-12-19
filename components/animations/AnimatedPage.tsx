@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, ReactNode } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/SafeThemeContext';
 import { globalAnimationEngine } from '../../lib/animations';
 
 interface AnimatedPageProps {

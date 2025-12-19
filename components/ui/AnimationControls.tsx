@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/SafeThemeContext';
 
 export function AnimationControls() {
   const { animationConfig, updateAnimationConfig } = useTheme();

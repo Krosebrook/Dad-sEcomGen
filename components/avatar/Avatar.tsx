@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/SafeThemeContext';
 
 export type AvatarPersonality = 'professional' | 'friendly' | 'expert';
 export type AvatarExpression = 'idle' | 'talking' | 'celebrating' | 'thinking' | 'welcoming' | 'explaining' | 'excited';

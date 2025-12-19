@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/SafeThemeContext';
 import { applyColorblindFilter, applyTextScale, applyHighContrast, applyFocusVisible, ColorblindMode } from '../../lib/accessibility';
 
 export function AccessibilityPanel() {
