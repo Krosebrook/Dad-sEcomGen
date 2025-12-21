@@ -46,29 +46,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log('AuthProvider: Auth state changed:', event);
-        (async () => {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          setLoading(false);
 
-          if (event === 'SIGNED_IN' && currentSession?.user) {
-            const { data: existingProfile } = await supabase
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setLoading(false);
+
+        if (event === 'SIGNED_IN' && currentSession?.user) {
+          try {
+            const { error: upsertError } = await supabase
               .from('profiles')
-              .select('id')
-              .eq('id', currentSession.user.id)
-              .maybeSingle();
+              .upsert(
+                {
+                  id: currentSession.user.id,
+                  email: currentSession.user.email || '',
+                  full_name: currentSession.user.user_metadata?.full_name || null,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'id' }
+              );
 
-            if (!existingProfile) {
-              await supabase.from('profiles').insert({
-                id: currentSession.user.id,
-                email: currentSession.user.email || '',
-                full_name: currentSession.user.user_metadata?.full_name || null,
-              });
+            if (upsertError) {
+              console.error('AuthProvider: Failed to create/update profile:', upsertError);
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+            } else {
+              console.log('AuthProvider: Profile created/updated successfully');
             }
+          } catch (error) {
+            console.error('AuthProvider: Unexpected error during profile creation:', error);
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
           }
-        })();
+        }
       }
     );
 
@@ -89,11 +102,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (!error && data.user) {
-      await supabase.from('profiles').insert({
-        id: data.user.id,
-        email: data.user.email || '',
-        full_name: fullName || null,
-      });
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: data.user.id,
+            email: data.user.email || '',
+            full_name: fullName || null,
+          },
+          { onConflict: 'id' }
+        );
+
+      if (profileError) {
+        console.error('Failed to create profile:', profileError);
+        return { error: profileError as any };
+      }
     }
 
     return { error };

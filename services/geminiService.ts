@@ -1,5 +1,5 @@
-// FIX: Add necessary imports from @google/genai and other modules.
 import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { retryWithBackoff, withTimeout, APIError } from '../lib/apiHelpers';
 import {
     ProductPlan,
     ProductVariant,
@@ -136,24 +136,36 @@ export async function generateProductPlan(productIdea: string, brandVoice: strin
         prompt += `\n\nThe user has updated the variants. Please regenerate the plan based on these new variants, updating the total stock and average price accordingly: ${JSON.stringify(existingVariants)}`;
     }
 
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    plan: productPlanSchema,
-                    smartGoals: smartGoalsSchema
+    const response = await retryWithBackoff(
+        () => withTimeout(
+            ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    systemInstruction,
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                            plan: productPlanSchema,
+                            smartGoals: smartGoalsSchema
+                        }
+                    }
                 }
+            }),
+            30000
+        ),
+        {
+            maxAttempts: 3,
+            delayMs: 1000,
+            onRetry: (attempt, error) => {
+                console.warn(`Retry attempt ${attempt} for generateProductPlan:`, error.message);
             }
         }
-    });
+    );
 
     const parsed = parseJson<{ plan: ProductPlan, smartGoals: SMARTGoals }>(response.text);
-    if (!parsed) throw new Error("Failed to generate product plan");
+    if (!parsed) throw new APIError("Failed to generate product plan", 500, false);
     
     // Ensure calculated fields are correct
     if(parsed.plan.variants && parsed.plan.variants.length > 0) {
@@ -173,18 +185,24 @@ export async function generateSmartGoals(productIdea: string, brandVoice: string
     const systemInstruction = `You are a business strategist creating S.M.A.R.T. goals for a new e-commerce venture. The brand voice is "${brandVoice}". Your response must be a JSON object and nothing else.`;
     const prompt = `Generate S.M.A.R.T. goals for a new e-commerce business selling "${productIdea}". The goals should cover the first 6 months of operation. Focus on launch, initial sales, and brand awareness.`;
 
-    const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-            systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema: smartGoalsSchema,
-        }
-    });
-    
+    const response = await retryWithBackoff(
+        () => withTimeout(
+            ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    systemInstruction,
+                    responseMimeType: 'application/json',
+                    responseSchema: smartGoalsSchema,
+                }
+            }),
+            30000
+        ),
+        { maxAttempts: 3, delayMs: 1000 }
+    );
+
     const parsed = parseJson<SMARTGoals>(response.text);
-    if (!parsed) throw new Error("Failed to generate SMART goals");
+    if (!parsed) throw new APIError("Failed to generate SMART goals", 500, false);
     return parsed;
 }
 

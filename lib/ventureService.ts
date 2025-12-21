@@ -114,7 +114,7 @@ export const ventureService = {
     }
   },
 
-  async getVenture(ventureId: string): Promise<SavedVenture | null> {
+  async getVenture(ventureId: string, updateAccessTime: boolean = true): Promise<SavedVenture | null> {
     const { data: venture, error: ventureError } = await supabase
       .from('ventures')
       .select('*')
@@ -123,15 +123,23 @@ export const ventureService = {
 
     if (ventureError || !venture) return null;
 
-    await supabase
-      .from('ventures')
-      .update({ last_accessed_at: new Date().toISOString() })
-      .eq('id', ventureId);
+    if (updateAccessTime) {
+      await supabase
+        .from('ventures')
+        .update({ last_accessed_at: new Date().toISOString() })
+        .eq('id', ventureId);
+    }
 
+    const latestData = await this.getLatestVentureData(ventureId);
+    return this.buildSavedVenture(venture, latestData);
+  },
+
+  async getLatestVentureData(ventureId: string): Promise<Record<string, any>> {
     const { data: ventureDataRecords } = await supabase
       .from('venture_data')
-      .select('*')
+      .select('data_type, data, version')
       .eq('venture_id', ventureId)
+      .order('data_type', { ascending: true })
       .order('version', { ascending: false });
 
     const latestData: Record<string, any> = {};
@@ -142,7 +150,49 @@ export const ventureService = {
         }
       }
     }
+    return latestData;
+  },
 
+  async getAllVentures(): Promise<SavedVenture[]> {
+    const { data: ventures, error } = await supabase
+      .from('ventures')
+      .select('*')
+      .eq('is_archived', false)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    if (!ventures || ventures.length === 0) return [];
+
+    const ventureIds = ventures.map(v => v.id);
+
+    const { data: allVentureData } = await supabase
+      .from('venture_data')
+      .select('venture_id, data_type, data, version')
+      .in('venture_id', ventureIds)
+      .order('venture_id', { ascending: true })
+      .order('data_type', { ascending: true })
+      .order('version', { ascending: false });
+
+    const ventureDataMap = new Map<string, Record<string, any>>();
+    if (allVentureData) {
+      for (const record of allVentureData) {
+        if (!ventureDataMap.has(record.venture_id)) {
+          ventureDataMap.set(record.venture_id, {});
+        }
+        const latestData = ventureDataMap.get(record.venture_id)!;
+        if (!latestData[record.data_type]) {
+          latestData[record.data_type] = record.data;
+        }
+      }
+    }
+
+    return ventures.map(venture => {
+      const latestData = ventureDataMap.get(venture.id) || {};
+      return this.buildSavedVenture(venture, latestData);
+    });
+  },
+
+  buildSavedVenture(venture: any, latestData: Record<string, any>): SavedVenture {
     const appData: AppData = {
       productIdea: venture.product_idea,
       brandVoice: venture.brand_voice,
@@ -182,27 +232,6 @@ export const ventureService = {
       lastModified: venture.updated_at,
       data: appData,
     };
-  },
-
-  async getAllVentures(): Promise<SavedVenture[]> {
-    const { data: ventures, error } = await supabase
-      .from('ventures')
-      .select('*')
-      .eq('is_archived', false)
-      .order('updated_at', { ascending: false });
-
-    if (error) throw error;
-    if (!ventures) return [];
-
-    const venturesWithData: SavedVenture[] = [];
-    for (const venture of ventures) {
-      const fullVenture = await this.getVenture(venture.id);
-      if (fullVenture) {
-        venturesWithData.push(fullVenture);
-      }
-    }
-
-    return venturesWithData;
   },
 
   async deleteVenture(ventureId: string): Promise<void> {

@@ -43,14 +43,21 @@ function initializeSupabase(): SupabaseClient<Database> | null {
   }
 }
 
-export const supabase = initializeSupabase();
-
-export function getSupabase(): SupabaseClient<Database> | null {
+export function getSupabase(): SupabaseClient<Database> {
   if (!supabaseInstance && !initializationError) {
-    return initializeSupabase();
+    initializeSupabase();
   }
+
+  if (!supabaseInstance) {
+    throw new Error(
+      `Supabase initialization failed: ${initializationError?.message || 'Unknown error'}`
+    );
+  }
+
   return supabaseInstance;
 }
+
+export const supabase = getSupabase();
 
 export function hasSupabase(): boolean {
   return supabaseInstance !== null;
