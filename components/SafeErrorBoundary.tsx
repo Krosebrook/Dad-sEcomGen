@@ -78,8 +78,8 @@ class SafeErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full bg-white dark:bg-slate-800 rounded-lg shadow-xl p-8">
+        <div className="min-h-screen bg-white flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full bg-white border-2 border-slate-200 rounded-lg shadow-xl p-8">
             <div className="text-center">
               <div className="text-6xl mb-4">⚠️</div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
