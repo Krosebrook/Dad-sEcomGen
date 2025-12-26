@@ -188,7 +188,9 @@ export const visualizationService = {
       name: campaign.name,
       spent: campaign.budget,
       revenue: campaign.revenue || 0,
-      roi: campaign.revenue ? ((campaign.revenue - campaign.budget) / campaign.budget) * 100 : 0,
+      roi: campaign.revenue && campaign.budget > 0
+        ? ((campaign.revenue - campaign.budget) / campaign.budget) * 100
+        : 0,
     }));
   },
 
@@ -217,7 +219,9 @@ export const visualizationService = {
     for (let i = 0; i < data.length; i++) {
       const start = Math.max(0, i - window + 1);
       const slice = data.slice(start, i + 1);
-      const avg = slice.reduce((sum, val) => sum + val, 0) / slice.length;
+      const avg = slice.length > 0
+        ? slice.reduce((sum, val) => sum + val, 0) / slice.length
+        : 0;
       result.push(avg);
     }
     return result;

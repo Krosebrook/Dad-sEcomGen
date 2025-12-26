@@ -7,3 +7,5 @@ export { Textarea } from './Textarea';
 export { InteractiveButton } from './InteractiveButton';
 export { ThemeSelector } from './ThemeSelector';
 export { AnimationControls } from './AnimationControls';
+export { ErrorRetry, ErrorBoundaryFallback, InlineError } from './ErrorRetry';
+export { RateLimitBanner, RateLimitIndicator } from './RateLimitBanner';

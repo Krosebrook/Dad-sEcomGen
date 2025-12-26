@@ -8,9 +8,33 @@ export interface VentureWithData extends SavedVenture {
 }
 
 export const ventureService = {
+  async checkDuplicateName(name: string, excludeVentureId?: string): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    let query = supabase
+      .from('ventures')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('name', name)
+      .eq('is_archived', false);
+
+    if (excludeVentureId) {
+      query = query.neq('id', excludeVentureId);
+    }
+
+    const { data } = await query.maybeSingle();
+    return data !== null;
+  },
+
   async createVenture(name: string, productIdea: string, brandVoice: string, data: AppData): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
+
+    const isDuplicate = await this.checkDuplicateName(name);
+    if (isDuplicate) {
+      throw new Error('A venture with this name already exists. Please choose a different name.');
+    }
 
     const { data: venture, error: ventureError } = await supabase
       .from('ventures')
@@ -255,6 +279,11 @@ export const ventureService = {
   async renameVenture(ventureId: string, newName: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
+
+    const isDuplicate = await this.checkDuplicateName(newName, ventureId);
+    if (isDuplicate) {
+      throw new Error('A venture with this name already exists. Please choose a different name.');
+    }
 
     const { error } = await supabase
       .from('ventures')

@@ -18,7 +18,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({ estimatedPrice = 0,
 
   const totalCostPerUnit = productCost + shippingCost + marketingCost + (sellingPrice * platformFees / 100);
   const profitPerUnit = sellingPrice - totalCostPerUnit;
-  const profitMargin = (profitPerUnit / sellingPrice) * 100;
+  const profitMargin = sellingPrice > 0 ? (profitPerUnit / sellingPrice) * 100 : 0;
   const monthlyProfit = profitPerUnit * monthlyUnits;
   const annualProfit = monthlyProfit * 12;
 

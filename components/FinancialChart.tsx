@@ -28,12 +28,12 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ financials }) =>
   const formatCurrency = visualizationService.formatCurrency;
 
   const revenuePercent = 100;
-  const cogsPercent = (cogs / revenue) * 100;
-  const marketingPercent = (marketingCosts / revenue) * 100;
-  const shippingPercent = (avgShippingCost / revenue) * 100;
-  const fixedPercent = (fixedCosts / revenue) * 100;
-  const feesPercent = (transactionFees / revenue) * 100;
-  const profitPercent = (profit / revenue) * 100;
+  const cogsPercent = revenue > 0 ? (cogs / revenue) * 100 : 0;
+  const marketingPercent = revenue > 0 ? (marketingCosts / revenue) * 100 : 0;
+  const shippingPercent = revenue > 0 ? (avgShippingCost / revenue) * 100 : 0;
+  const fixedPercent = revenue > 0 ? (fixedCosts / revenue) * 100 : 0;
+  const feesPercent = revenue > 0 ? (transactionFees / revenue) * 100 : 0;
+  const profitPercent = revenue > 0 ? (profit / revenue) * 100 : 0;
 
   const projectionData = visualizationService.prepareFinancialProjectionData(financials, projectionMonths);
   const costBreakdownData = visualizationService.prepareCostBreakdownData(financials);
