@@ -49,33 +49,74 @@ const ShopifyIntegrationCard: React.FC<ShopifyIntegrationCardProps> = ({
         setIsPushing(true);
         setPushError(null);
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2500));
-        
-        // Simulate success/failure
-        const isSuccess = Math.random() > 0.2; // 80% success rate
-        
-        if (isSuccess) {
+        try {
+            const variants = productPlan.pricing.tiers.map((tier: any) => ({
+                price: tier.price.toString(),
+                option1: tier.name,
+                inventory_quantity: 100,
+                sku: `${productPlan.productTitle.replace(/\s+/g, '-').toUpperCase()}-${tier.name.replace(/\s+/g, '-').toUpperCase()}`,
+            }));
+
+            const images = [];
+            if (logoImageUrl) {
+                images.push({ src: logoImageUrl, alt: `${productPlan.productTitle} Logo` });
+            }
+            if (storefrontMockupUrl) {
+                images.push({ src: storefrontMockupUrl, alt: `${productPlan.productTitle} Mockup` });
+            }
+
+            const shopifyProduct = {
+                title: productPlan.productTitle,
+                body_html: productPlan.description,
+                vendor: 'My Store',
+                product_type: productPlan.category || 'General',
+                variants,
+                images,
+                tags: productPlan.keywords?.join(', ') || '',
+                status: 'draft' as const,
+            };
+
+            const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-proxy`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'create_product',
+                    storeUrl: integrationConfig!.storeUrl,
+                    apiToken: integrationConfig!.apiToken,
+                    product: shopifyProduct,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details?.errors || 'Failed to push product to Shopify');
+            }
+
             const newConfig: ShopifyIntegration = {
                 ...(integrationConfig!),
                 lastPushStatus: 'success',
                 lastPushDate: new Date().toISOString(),
-                lastPushedProductId: `gid://shopify/Product/${Math.floor(1000000000000 + Math.random() * 9000000000000)}`,
+                lastPushedProductId: data.product?.id?.toString() || null,
             };
             setIntegrationConfig(newConfig);
             onPlanModified();
-        } else {
-             const newConfig: ShopifyIntegration = {
+        } catch (error) {
+            const newConfig: ShopifyIntegration = {
                 ...(integrationConfig!),
                 lastPushStatus: 'failed',
                 lastPushDate: new Date().toISOString(),
             };
             setIntegrationConfig(newConfig);
-            setPushError("Failed to push product. Please check your Shopify credentials and permissions.");
+            setPushError(error instanceof Error ? error.message : "Failed to push product. Please check your Shopify credentials and permissions.");
             onPlanModified();
+        } finally {
+            setIsPushing(false);
         }
-
-        setIsPushing(false);
     };
 
     const isConfigured = integrationConfig?.storeUrl && integrationConfig?.apiToken;

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ProductScoutResult } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Button } from './ui/Button';
+import ProfitCalculator from './ProfitCalculator';
 
 // Icons for visual flair
 const TrendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>;
@@ -21,6 +22,8 @@ const getScoreColor = (score: number): string => {
 };
 
 const ProductScoutCard: React.FC<ProductScoutCardProps> = ({ result, onSelect }) => {
+  const [showCalculator, setShowCalculator] = useState(false);
+
   return (
     <Card className="w-full text-left animate-fade-in">
       <CardHeader>
@@ -70,6 +73,19 @@ const ProductScoutCard: React.FC<ProductScoutCardProps> = ({ result, onSelect })
                 </div>
             </div>
         </div>
+
+        <div className="pt-2 space-y-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowCalculator(!showCalculator)}
+            className="w-full"
+          >
+            {showCalculator ? 'Hide' : 'Show'} Profit Calculator
+          </Button>
+
+          {showCalculator && <ProfitCalculator estimatedPrice={25} />}
+        </div>
+
         <div className="flex justify-end pt-2">
             <Button onClick={() => onSelect(result.productName)}>Use This Idea</Button>
         </div>

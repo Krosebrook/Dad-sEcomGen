@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../contexts/SafeThemeContext';
 import { SplashScene } from './SplashScene';
 import { OnboardingScene } from './OnboardingScene';
@@ -7,11 +7,6 @@ import { InteractionScene } from './InteractionScene';
 import { CompletionScene } from './CompletionScene';
 import { ThemeVariant } from '../../lib/themes';
 import { EnhancedExportManager } from '../export/EnhancedExportManager';
-import { ExportAnalyticsDashboard } from '../export/ExportAnalyticsDashboard';
-import { VideoExporter } from '../export/VideoExporter';
-import { ProductionPackageExporter } from '../export/ProductionPackageExporter';
-import { UIComponentExporter } from '../export/UIComponentExporter';
-import { VoiceAvatar } from '../avatar/VoiceAvatar';
 
 type Scene = 'splash' | 'onboarding' | 'dashboard' | 'interaction' | 'completion';
 
@@ -25,11 +20,6 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
   const [currentScene, setCurrentScene] = useState<Scene>(startScene);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [showExport, setShowExport] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const [showProduction, setShowProduction] = useState(false);
-  const [showVoiceDemo, setShowVoiceDemo] = useState(false);
-  const [showUIComponents, setShowUIComponents] = useState(false);
 
   const scenes: Scene[] = ['splash', 'onboarding', 'dashboard', 'interaction', 'completion'];
 
@@ -130,64 +120,7 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
               color: '#ffffff',
             }}
           >
-            Export
-          </button>
-
-          <button
-            onClick={() => setShowAnalytics(!showAnalytics)}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all border-2"
-            style={{
-              backgroundColor: 'transparent',
-              color: theme.colors.text,
-              borderColor: theme.colors.border,
-            }}
-          >
-            Analytics
-          </button>
-
-          <button
-            onClick={() => setShowVideo(!showVideo)}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={{
-              backgroundColor: theme.colors.accent,
-              color: '#ffffff',
-            }}
-          >
-            Video Export
-          </button>
-
-          <button
-            onClick={() => setShowProduction(!showProduction)}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all border-2"
-            style={{
-              backgroundColor: theme.colors.success,
-              color: '#ffffff',
-            }}
-          >
-            Production Package
-          </button>
-
-          <button
-            onClick={() => setShowVoiceDemo(!showVoiceDemo)}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all border-2"
-            style={{
-              backgroundColor: 'transparent',
-              color: theme.colors.text,
-              borderColor: theme.colors.primary,
-            }}
-          >
-            Voice Avatar
-          </button>
-
-          <button
-            onClick={() => setShowUIComponents(!showUIComponents)}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={{
-              backgroundColor: theme.colors.secondary,
-              color: '#ffffff',
-            }}
-          >
-            UI Library
+            {showExport ? 'Hide Export' : 'Show Export'}
           </button>
         </div>
       </div>
@@ -200,50 +133,6 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
               baseFilename="storyboard-demo"
               onExportComplete={() => console.log('Storyboard exported!')}
             />
-          </div>
-        )}
-
-        {showAnalytics && (
-          <div className="mb-6">
-            <ExportAnalyticsDashboard />
-          </div>
-        )}
-
-        {showVideo && (
-          <div className="mb-6">
-            <VideoExporter
-              sceneIds={['splash-scene', 'onboarding-scene', 'dashboard-scene', 'interaction-scene', 'completion-scene']}
-              fps={60}
-              duration={3}
-              onExportComplete={() => console.log('Video frames exported!')}
-            />
-          </div>
-        )}
-
-        {showProduction && (
-          <div className="mb-6">
-            <ProductionPackageExporter
-              sceneIds={['splash-scene', 'onboarding-scene', 'dashboard-scene', 'interaction-scene', 'completion-scene']}
-              onExportComplete={() => console.log('Production package exported!')}
-            />
-          </div>
-        )}
-
-        {showVoiceDemo && (
-          <div className="mb-6 flex justify-center">
-            <VoiceAvatar
-              personality="friendly"
-              message="Welcome to the production-ready storyboard demo! This interface showcases complete UI workflow with cinematic animations, voice-guided narration, and multi-platform export capabilities. You can export everything as a professional package for design handoff, marketing, and development."
-              autoPlay={false}
-              size="medium"
-              showWaveform={true}
-            />
-          </div>
-        )}
-
-        {showUIComponents && (
-          <div className="mb-6">
-            <UIComponentExporter onExportComplete={() => console.log('UI components exported!')} />
           </div>
         )}
 

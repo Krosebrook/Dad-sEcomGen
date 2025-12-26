@@ -3,6 +3,8 @@ import { SavedVenture } from '../types';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import PriceHistoryChart from './PriceHistoryChart';
+import VentureSharing from './VentureSharing';
+import WorkflowAutomation from './WorkflowAutomation';
 
 interface MyVenturesDashboardProps {
     ventures: SavedVenture[];
@@ -29,6 +31,14 @@ const ArrowDownIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
 );
 
+const ShareIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+);
+
+const AutomationIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+);
+
 type SortKey = 'name' | 'lastModified' | 'id';
 type SortOrder = 'asc' | 'desc';
 
@@ -38,6 +48,8 @@ const MyVenturesDashboard: React.FC<MyVenturesDashboardProps> = ({ ventures, onL
     const [sortKey, setSortKey] = useState<SortKey>('lastModified');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
     const [searchQuery, setSearchQuery] = useState('');
+    const [sharingVentureId, setSharingVentureId] = useState<string | null>(null);
+    const [automationVentureId, setAutomationVentureId] = useState<string | null>(null);
 
     const handleRenameStart = (venture: SavedVenture) => {
         setEditingId(venture.id);
@@ -170,6 +182,12 @@ const MyVenturesDashboard: React.FC<MyVenturesDashboardProps> = ({ ventures, onL
                                              <Button size="sm" variant="outline" onClick={() => handleRenameStart(venture)} aria-label={`Rename ${venture.name}`}>
                                                 <PencilIcon className="h-4 w-4" />
                                             </Button>
+                                            <Button size="sm" variant="outline" onClick={() => setSharingVentureId(venture.id)} aria-label={`Share ${venture.name}`}>
+                                                <ShareIcon className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="sm" variant="outline" onClick={() => setAutomationVentureId(venture.id)} aria-label={`Automate ${venture.name}`}>
+                                                <AutomationIcon className="h-4 w-4" />
+                                            </Button>
                                             <Button size="sm" variant="outline" onClick={() => onDelete(venture.id)} aria-label={`Delete ${venture.name}`}>
                                                 <TrashIcon className="h-4 w-4 text-red-500" />
                                             </Button>
@@ -186,6 +204,37 @@ const MyVenturesDashboard: React.FC<MyVenturesDashboardProps> = ({ ventures, onL
                     <Button variant="outline" onClick={onClose}>Close</Button>
                 </div>
             </div>
+
+            {sharingVentureId && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-fade-in"
+                    onClick={() => setSharingVentureId(null)}
+                >
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg">
+                        <VentureSharing
+                            ventureId={sharingVentureId}
+                            ventureName={ventures.find(v => v.id === sharingVentureId)?.name || 'Venture'}
+                        />
+                        <div className="mt-3 text-right">
+                            <Button variant="outline" onClick={() => setSharingVentureId(null)}>Close</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {automationVentureId && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-fade-in"
+                    onClick={() => setAutomationVentureId(null)}
+                >
+                    <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg">
+                        <WorkflowAutomation ventureId={automationVentureId} />
+                        <div className="mt-3 text-right">
+                            <Button variant="outline" onClick={() => setAutomationVentureId(null)}>Close</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
