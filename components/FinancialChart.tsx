@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FinancialProjections } from '../types';
+import { ChartContainer, LineChart, PieChart, AreaChart } from './charts';
+import { visualizationService } from '../services/visualizationService';
 
 interface FinancialChartProps {
   financials: FinancialProjections;
 }
 
 export const FinancialChart: React.FC<FinancialChartProps> = ({ financials }) => {
+  const [projectionMonths, setProjectionMonths] = useState(12);
+  const [cashFlowMonths, setCashFlowMonths] = useState(6);
+
   const revenue = (financials.sellingPriceCents / 100) * financials.estimatedMonthlySales;
   const cogs = (financials.costOfGoodsSoldCents / 100) * financials.estimatedMonthlySales;
   const marketingCosts = financials.monthlyMarketingBudgetCents / 100;
@@ -18,15 +23,9 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ financials }) =>
   const totalCosts = cogs + marketingCosts + fixedCosts + transactionFees + avgShippingCost;
   const profit = revenue - totalCosts;
   const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const breakEvenUnits = visualizationService.calculateBreakEvenPoint(financials);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatCurrency = visualizationService.formatCurrency;
 
   const revenuePercent = 100;
   const cogsPercent = (cogs / revenue) * 100;
@@ -35,6 +34,10 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ financials }) =>
   const fixedPercent = (fixedCosts / revenue) * 100;
   const feesPercent = (transactionFees / revenue) * 100;
   const profitPercent = (profit / revenue) * 100;
+
+  const projectionData = visualizationService.prepareFinancialProjectionData(financials, projectionMonths);
+  const costBreakdownData = visualizationService.prepareCostBreakdownData(financials);
+  const cashFlowData = visualizationService.prepareCashFlowData(financials, cashFlowMonths);
 
   return (
     <div className="space-y-6">
@@ -84,89 +87,75 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ financials }) =>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Cost Breakdown</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartContainer
+          title="Revenue & Profit Projections"
+          subtitle={`${projectionMonths}-month forecast with 5% monthly growth`}
+          height={350}
+          actions={
+            <select
+              value={projectionMonths}
+              onChange={(e) => setProjectionMonths(Number(e.target.value))}
+              className="text-sm px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+            >
+              <option value={6}>6 months</option>
+              <option value={12}>12 months</option>
+              <option value={24}>24 months</option>
+            </select>
+          }
+        >
+          <LineChart
+            data={projectionData}
+            lines={[
+              { dataKey: 'revenue', name: 'Revenue', color: '#10b981' },
+              { dataKey: 'costs', name: 'Total Costs', color: '#ef4444' },
+              { dataKey: 'profit', name: 'Net Profit', color: '#3b82f6' },
+            ]}
+            formatYAxis={visualizationService.formatCompactCurrency}
+            formatTooltip={visualizationService.formatCurrency}
+          />
+        </ChartContainer>
 
-        <div className="space-y-3">
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600 dark:text-slate-400">Revenue</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(revenue)}</span>
-            </div>
-            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-green-500" style={{ width: '100%' }}></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600 dark:text-slate-400">Cost of Goods ({cogsPercent.toFixed(1)}%)</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(cogs)}</span>
-            </div>
-            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-slate-400 dark:bg-slate-500" style={{ width: `${cogsPercent}%` }}></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600 dark:text-slate-400">Marketing ({marketingPercent.toFixed(1)}%)</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(marketingCosts)}</span>
-            </div>
-            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-400" style={{ width: `${marketingPercent}%` }}></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600 dark:text-slate-400">Shipping ({shippingPercent.toFixed(1)}%)</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(avgShippingCost)}</span>
-            </div>
-            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-yellow-400" style={{ width: `${shippingPercent}%` }}></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600 dark:text-slate-400">Transaction Fees ({feesPercent.toFixed(1)}%)</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(transactionFees)}</span>
-            </div>
-            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-orange-400" style={{ width: `${feesPercent}%` }}></div>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600 dark:text-slate-400">Fixed Costs ({fixedPercent.toFixed(1)}%)</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(fixedCosts)}</span>
-            </div>
-            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-red-400" style={{ width: `${fixedPercent}%` }}></div>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="font-semibold text-slate-900 dark:text-white">Net Profit ({profitPercent.toFixed(1)}%)</span>
-              <span className={`font-bold ${
-                profit >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {formatCurrency(profit)}
-              </span>
-            </div>
-            <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div className={`h-full ${
-                profit >= 0 ? 'bg-green-500' : 'bg-red-500'
-              }`} style={{ width: `${Math.abs(profitPercent)}%` }}></div>
-            </div>
-          </div>
-        </div>
+        <ChartContainer
+          title="Cost Breakdown"
+          subtitle="Monthly expense distribution"
+          height={350}
+        >
+          <PieChart
+            data={costBreakdownData}
+            formatValue={visualizationService.formatCurrency}
+            showPercentage={true}
+            innerRadius={60}
+          />
+        </ChartContainer>
       </div>
+
+      <ChartContainer
+        title="Cash Flow Analysis"
+        subtitle={`${cashFlowMonths}-month cumulative cash flow`}
+        height={350}
+        actions={
+          <select
+            value={cashFlowMonths}
+            onChange={(e) => setCashFlowMonths(Number(e.target.value))}
+            className="text-sm px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+          >
+            <option value={3}>3 months</option>
+            <option value={6}>6 months</option>
+            <option value={12}>12 months</option>
+          </select>
+        }
+      >
+        <AreaChart
+          data={cashFlowData}
+          areas={[
+            { dataKey: 'monthly', name: 'Monthly Cash Flow', color: '#3b82f6' },
+            { dataKey: 'cumulative', name: 'Cumulative Cash Flow', color: '#10b981' },
+          ]}
+          formatYAxis={visualizationService.formatCompactCurrency}
+          formatTooltip={visualizationService.formatCurrency}
+        />
+      </ChartContainer>
 
       <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg">
         <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">Break-even Analysis</h4>
@@ -174,13 +163,27 @@ export const FinancialChart: React.FC<FinancialChartProps> = ({ financials }) =>
           <div className="flex justify-between">
             <span>Units to break-even:</span>
             <span className="font-semibold text-slate-900 dark:text-white">
-              {Math.ceil(fixedCosts / ((financials.sellingPriceCents - financials.costOfGoodsSoldCents) / 100))} units
+              {breakEvenUnits === Infinity ? 'Not profitable' : `${visualizationService.formatNumber(breakEvenUnits)} units`}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Profit per unit:</span>
             <span className="font-semibold text-slate-900 dark:text-white">
               {formatCurrency((profit / financials.estimatedMonthlySales) || 0)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Current vs break-even:</span>
+            <span className={`font-semibold ${
+              financials.estimatedMonthlySales >= breakEvenUnits
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-orange-600 dark:text-orange-400'
+            }`}>
+              {breakEvenUnits === Infinity
+                ? 'Need higher margin'
+                : financials.estimatedMonthlySales >= breakEvenUnits
+                ? `${visualizationService.formatNumber(financials.estimatedMonthlySales - breakEvenUnits)} units above`
+                : `${visualizationService.formatNumber(breakEvenUnits - financials.estimatedMonthlySales)} units needed`}
             </span>
           </div>
         </div>
