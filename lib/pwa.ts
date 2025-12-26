@@ -1,5 +1,11 @@
 export function registerServiceWorker(): void {
-  if ('serviceWorker' in navigator) {
+  // Skip Service Worker registration in unsupported environments (e.g., StackBlitz)
+  if (!('serviceWorker' in navigator)) {
+    console.log('Service Worker not supported in this environment');
+    return;
+  }
+
+  try {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/sw.js')
@@ -18,9 +24,13 @@ export function registerServiceWorker(): void {
           });
         })
         .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+          // Service Worker registration failed - this is non-critical
+          console.warn('Service Worker registration failed (non-critical):', error.message || error);
         });
     });
+  } catch (error) {
+    // Catch any synchronous errors
+    console.warn('Service Worker initialization error (non-critical):', error);
   }
 }
 

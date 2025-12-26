@@ -9,7 +9,7 @@ interface SplashSceneProps {
 }
 
 export function SplashScene({ onComplete, duration = 3000, withSound = true }: SplashSceneProps) {
-  const { theme, animationConfig, themeVariant } = useTheme();
+  const { theme, animationConfig, variant: themeVariant } = useTheme();
   const [stage, setStage] = useState<'logo' | 'morph' | 'particles' | 'complete'>('logo');
 
   useEffect(() => {

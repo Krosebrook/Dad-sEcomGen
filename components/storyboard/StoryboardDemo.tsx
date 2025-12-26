@@ -16,7 +16,7 @@ interface StoryboardDemoProps {
 }
 
 export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: StoryboardDemoProps) {
-  const { theme, setThemeVariant, themeVariant } = useTheme();
+  const { theme, setVariant: setThemeVariant, variant: themeVariant } = useTheme();
   const [currentScene, setCurrentScene] = useState<Scene>(startScene);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [showExport, setShowExport] = useState(false);

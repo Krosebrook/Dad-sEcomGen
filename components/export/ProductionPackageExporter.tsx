@@ -18,7 +18,7 @@ interface ExportOptions {
 }
 
 export function ProductionPackageExporter({ sceneIds, onExportComplete }: ProductionPackageExporterProps) {
-  const { theme, themeVariant } = useTheme();
+  const { theme, variant: themeVariant } = useTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTask, setCurrentTask] = useState('');
