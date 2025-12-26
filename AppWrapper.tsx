@@ -3,89 +3,36 @@ import App from './App';
 import { ThemeProvider } from './contexts/SafeThemeContext';
 import { ViewportProvider } from './contexts/ViewportContext';
 import { AuthProvider } from './contexts/AuthContext';
-import { SplashScene } from './components/storyboard/SplashScene';
 import { AccessibilityPanel } from './components/accessibility/AccessibilityPanel';
 import { InstallPrompt, OfflineBanner, UpdatePrompt } from './components/pwa';
 import { registerServiceWorker } from './lib/pwa';
-import { STORAGE_KEYS } from './lib/constants';
 import { validateEnvironment } from './lib/envValidation';
 import { SafeErrorBoundary } from './components/SafeErrorBoundary';
 
 export default function AppWrapper() {
-  const [showSplash, setShowSplash] = useState(() => {
-    const isDev = import.meta.env.DEV;
-    if (isDev) return false;
-
-    try {
-      return !sessionStorage.getItem(STORAGE_KEYS.SPLASH_SEEN);
-    } catch {
-      return false;
-    }
-  });
-
-  const [appReady, setAppReady] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
-  const [envWarnings, setEnvWarnings] = useState<string[]>([]);
 
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        console.log('AppWrapper: Starting initialization...');
+    console.log('AppWrapper: Initializing...');
 
-        const envValidation = validateEnvironment();
+    const envValidation = validateEnvironment();
 
-        if (!envValidation.isValid) {
-          console.error('AppWrapper: Environment validation failed', envValidation.errors);
-          setInitError(new Error(`Configuration Error: ${envValidation.errors.join(', ')}`));
-          setAppReady(true);
-          return;
-        }
-
-        if (envValidation.warnings.length > 0) {
-          console.warn('AppWrapper: Environment warnings', envValidation.warnings);
-          setEnvWarnings(envValidation.warnings);
-        }
-
-        try {
-          registerServiceWorker();
-          console.log('AppWrapper: Service worker registered');
-        } catch (swError) {
-          console.warn('AppWrapper: Service worker registration failed (non-critical)', swError);
-        }
-
-        if (!showSplash) {
-          console.log('AppWrapper: Splash skipped, app ready');
-          setAppReady(true);
-        } else {
-          console.log('AppWrapper: Showing splash screen');
-        }
-
-      } catch (error) {
-        console.error('AppWrapper: Fatal initialization error:', error);
-        setInitError(error as Error);
-        setAppReady(true);
-      }
-    };
-
-    initializeApp();
-  }, [showSplash]);
-
-  const handleSplashComplete = () => {
-    try {
-      console.log('AppWrapper: Splash complete, loading app...');
-      try {
-        sessionStorage.setItem(STORAGE_KEYS.SPLASH_SEEN, 'true');
-      } catch (storageError) {
-        console.warn('AppWrapper: Could not save splash state', storageError);
-      }
-      setShowSplash(false);
-      setTimeout(() => setAppReady(true), 100);
-    } catch (error) {
-      console.error('AppWrapper: Error completing splash:', error);
-      setShowSplash(false);
-      setAppReady(true);
+    if (!envValidation.isValid) {
+      console.error('AppWrapper: Environment validation failed', envValidation.errors);
+      setInitError(new Error(`Configuration Error: ${envValidation.errors.join(', ')}`));
+      return;
     }
-  };
+
+    if (envValidation.warnings.length > 0) {
+      console.warn('AppWrapper: Environment warnings', envValidation.warnings);
+    }
+
+    try {
+      registerServiceWorker();
+    } catch (swError) {
+      console.warn('AppWrapper: Service worker registration failed (non-critical)', swError);
+    }
+  }, []);
 
   if (initError) {
     return (
@@ -127,16 +74,11 @@ export default function AppWrapper() {
       <AuthProvider>
         <ThemeProvider>
           <ViewportProvider>
-            {showSplash && <SplashScene onComplete={handleSplashComplete} />}
-            {appReady && (
-              <>
-                <OfflineBanner />
-                <UpdatePrompt />
-                <App />
-                <AccessibilityPanel />
-                <InstallPrompt />
-              </>
-            )}
+            <OfflineBanner />
+            <UpdatePrompt />
+            <App />
+            <AccessibilityPanel />
+            <InstallPrompt />
           </ViewportProvider>
         </ThemeProvider>
       </AuthProvider>
