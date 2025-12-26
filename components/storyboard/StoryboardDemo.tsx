@@ -7,6 +7,7 @@ import { InteractionScene } from './InteractionScene';
 import { CompletionScene } from './CompletionScene';
 import { ThemeVariant } from '../../lib/themes';
 import { EnhancedExportManager } from '../export/EnhancedExportManager';
+import { ProductionPackageExporter } from '../export/ProductionPackageExporter';
 
 type Scene = 'splash' | 'onboarding' | 'dashboard' | 'interaction' | 'completion';
 
@@ -127,7 +128,11 @@ export function StoryboardDemo({ autoPlay = false, startScene = 'splash' }: Stor
 
       <div className="pt-24 px-4 pb-20">
         {showExport && (
-          <div className="mb-6">
+          <div className="mb-6 space-y-6">
+            <ProductionPackageExporter
+              sceneIds={['splash-scene', 'onboarding-scene', 'dashboard-scene', 'interaction-scene', 'completion-scene']}
+              onExportComplete={() => console.log('Production package exported!')}
+            />
             <EnhancedExportManager
               elementIds={['splash-scene', 'onboarding-scene', 'dashboard-scene', 'interaction-scene', 'completion-scene']}
               baseFilename="storyboard-demo"
