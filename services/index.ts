@@ -7,3 +7,6 @@ export { commentsService } from './commentsService';
 export { notificationsService } from './notificationsService';
 export { presenceService } from './presenceService';
 export { versionControlService } from './versionControlService';
+export { onboardingService } from './onboardingService';
+export { templateService } from './templateService';
+export { performanceService } from './performanceService';
