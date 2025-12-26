@@ -2,3 +2,8 @@ export * from './geminiService';
 export { ventureService } from '../lib/ventureService';
 export { analyticsService } from './analyticsService';
 export { userPreferencesService } from './userPreferencesService';
+export { collaborationService } from './collaborationService';
+export { commentsService } from './commentsService';
+export { notificationsService } from './notificationsService';
+export { presenceService } from './presenceService';
+export { versionControlService } from './versionControlService';
