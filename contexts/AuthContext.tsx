@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../lib/safeSupabase';
+import { supabase, hasSupabase } from '../lib/safeSupabase';
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +29,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     console.log('AuthProvider: Initializing...');
+    
+    // Check if Supabase is available
+    if (!hasSupabase()) {
+      console.warn('AuthProvider: Supabase not configured, running in demo mode');
+      setLoading(false);
+      return;
+    }
+
     const initializeAuth = async () => {
       try {
         console.log('AuthProvider: Getting session...');
@@ -91,6 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
+    if (!hasSupabase()) {
+      return { error: { message: 'Authentication not configured' } as AuthError };
+    }
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -123,6 +135,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
+    if (!hasSupabase()) {
+      return { error: { message: 'Authentication not configured' } as AuthError };
+    }
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -131,10 +147,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    if (!hasSupabase()) {
+      return;
+    }
     await supabase.auth.signOut();
   };
 
   const resetPassword = async (email: string) => {
+    if (!hasSupabase()) {
+      return { error: { message: 'Authentication not configured' } as AuthError };
+    }
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });

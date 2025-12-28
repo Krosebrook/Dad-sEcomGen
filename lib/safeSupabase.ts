@@ -57,7 +57,15 @@ export function getSupabase(): SupabaseClient<Database> {
   return supabaseInstance;
 }
 
-export const supabase = getSupabase();
+// Don't throw on module load - return null and let components handle it
+function getSafeSupabaseExport(): SupabaseClient<Database> | null {
+  if (!supabaseInstance && !initializationError) {
+    initializeSupabase();
+  }
+  return supabaseInstance;
+}
+
+export const supabase = getSafeSupabaseExport();
 
 export function hasSupabase(): boolean {
   return supabaseInstance !== null;
